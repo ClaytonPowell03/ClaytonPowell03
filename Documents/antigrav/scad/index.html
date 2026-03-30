@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCAD Studio — Browser-Based 3D Modeling</title>
+  <meta name="description" content="Write parametric 3D models in code. Preview instantly. Export to STL." />
+  <meta name="theme-color" content="#09090b" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◇</text></svg>" />
+  <link rel="stylesheet" href="/css/global.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+</head>
+<body>
+
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-screen__content">
+      <div class="loading-screen__logo">
+        <div class="loading-screen__icon">◇</div>
+        <span>SCAD Studio</span>
+      </div>
+      <div class="loading-screen__bar"><div class="loading-screen__bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Page Transition -->
+  <div class="page-transition" id="page-transition"><div class="page-transition__inner"></div></div>
+
+  <!-- Particles -->
+  <div id="tsparticles"></div>
+
+  <!-- ─── Navbar ─────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <a href="/" class="navbar__logo">
+      <div class="navbar__logo-icon">◇</div>
+      SCAD Studio
+    </a>
+    <ul class="navbar__links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#workflow">Workflow</a></li>
+      <li><a href="#showcase">Showcase</a></li>
+      <li><a href="render.html" class="btn btn-secondary nav-cta" id="nav-editor-btn">Open Editor</a></li>
+    </ul>
+    <button class="navbar__hamburger" id="hamburger-btn" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="#features" class="mobile-nav__link">Features</a>
+    <a href="#workflow" class="mobile-nav__link">Workflow</a>
+    <a href="#showcase" class="mobile-nav__link">Showcase</a>
+    <a href="render.html" class="btn btn-primary mobile-nav__cta">Open Editor →</a>
+  </div>
+
+  <!-- ─── Hero ───────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <div class="hero__canvas">
+      <canvas id="hero-three-canvas"></canvas>
+    </div>
+    <div class="hero__content">
+      <p class="hero__eyebrow">Browser-based parametric CAD</p>
+      <h1 class="hero__title">
+        <span class="line"><span>Design in Code.</span></span>
+        <span class="line"><span>Render Instantly.</span></span>
+      </h1>
+      <p class="hero__subtitle">
+        Write OpenSCAD-compatible models in your browser.
+        Real-time 3D preview, CSG booleans, one-click STL export.
+      </p>
+      <div class="hero__actions">
+        <a href="render.html" class="btn btn-primary page-link" id="cta-hero">Open Editor <span>→</span></a>
+        <a href="#features" class="btn btn-ghost">Learn more</a>
+      </div>
+    </div>
+    <div class="hero__scroll-hint">
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ─── Features ───────────────────────────────── -->
+  <section class="features" id="features">
+    <div class="features__header">
+      <h2 class="features__title fade-in">Everything you need in one tool</h2>
+      <p class="features__desc fade-in">No installs. No plugins. Just code and geometry.</p>
+    </div>
+
+    <div class="features__grid">
+      <!-- Hero feature: live editor preview -->
+      <div class="feature-hero fade-in">
+        <div class="feature-hero__preview">
+          <div class="feature-hero__editor-mock">
+            <div class="mock-titlebar">
+              <span class="mock-dot mock-dot--red"></span>
+              <span class="mock-dot mock-dot--yellow"></span>
+              <span class="mock-dot mock-dot--green"></span>
+              <span class="mock-filename">model.scad</span>
+            </div>
+            <pre class="mock-code" id="typing-code"><code></code></pre>
+          </div>
+          <div class="feature-hero__viewport">
+            <canvas id="feature-scene-canvas"></canvas>
+          </div>
+        </div>
+        <div class="feature-hero__caption">
+          <h3>Real-time preview</h3>
+          <p>Write SCAD on the left, see the model update on the right. Orbit, pan, zoom — all in WebGL.</p>
+        </div>
+      </div>
+
+      <!-- 3-column feature row -->
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>CSG Booleans</h3>
+        <p>Union, difference, intersection. Combine primitives into complex parts with real constructive solid geometry.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>Parametric Variables</h3>
+        <p>Define dimensions as variables. Use expressions and for-loops. Change one value, update the entire model.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>STL Export</h3>
+        <p>One-click download to STL. Send to your slicer, CNC, or 3D printer. No conversion tools needed.</p>
+      </div>
+
+      <!-- 3-column feature row 2 -->
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>Keyboard-First</h3>
+        <p>Ctrl+Enter to render. Ctrl+S to save. Camera presets on F, T, R, I. Built for the way you already work.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>Console & Logs</h3>
+        <p>Integrated console shows parse timing, vertex counts, and errors. Debug your geometry without leaving the editor.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>Model Templates</h3>
+        <p>Six built-in templates for common patterns: drilled blocks, trophies, columns, pipe joints. One click to load.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Workflow ────────────────────────────────── -->
+  <section class="workflow" id="workflow">
+    <div class="workflow__header">
+      <h2 class="fade-in">Code → Preview → Print</h2>
+      <p class="fade-in">Three steps from idea to physical part.</p>
+    </div>
+    <div class="workflow__steps">
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">1</div>
+        <div class="workflow-step__body">
+          <h3>Write</h3>
+          <p>Define geometry with SCAD's declarative language. Variables, loops, booleans — all the basics of parametric design.</p>
+        </div>
+      </div>
+      <div class="workflow-step__line fade-in"></div>
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">2</div>
+        <div class="workflow-step__body">
+          <h3>Preview</h3>
+          <p>Hit Ctrl+Enter. Your model renders in milliseconds with full lighting, shadows, and interactive orbit controls.</p>
+        </div>
+      </div>
+      <div class="workflow-step__line fade-in"></div>
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">3</div>
+        <div class="workflow-step__body">
+          <h3>Export</h3>
+          <p>Download as STL. Load into your slicer. Print. Hold your design in your hands.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Showcase ────────────────────────────────── -->
+  <section class="showcase" id="showcase">
+    <div class="showcase__container">
+      <div class="showcase__preview fade-in">
+        <canvas id="showcase-canvas"></canvas>
+        <div class="showcase__reflection"></div>
+      </div>
+      <div class="showcase__info">
+        <h2 class="fade-in">Built for speed</h2>
+        <p class="fade-in">Models parse in under 40ms. The viewport runs at 180+ FPS. Everything happens on the GPU — no server round-trips, no waiting.</p>
+        <div class="showcase__metrics fade-in">
+          <div class="metric">
+            <span class="metric__value" data-count="188">0</span>
+            <span class="metric__unit">FPS</span>
+          </div>
+          <div class="metric">
+            <span class="metric__value" data-count="39">&lt;40</span>
+            <span class="metric__unit">ms parse</span>
+          </div>
+          <div class="metric">
+            <span class="metric__value">0</span>
+            <span class="metric__unit">server calls</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA ────────────────────────────────────── -->
+  <section class="cta" id="cta">
+    <div class="cta__content">
+      <h2 class="fade-in">Start building</h2>
+      <p class="fade-in">No signup. No install. Just open the editor.</p>
+      <a href="render.html" class="btn btn-primary page-link fade-in" id="cta-bottom">Open Editor <span>→</span></a>
+    </div>
+  </section>
+
+  <!-- ─── Footer ─────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <a href="/" class="navbar__logo" style="font-size:1rem;">
+          <div class="navbar__logo-icon" style="width:24px;height:24px;font-size:0.65rem;border-radius:6px;">◇</div>
+          SCAD Studio
+        </a>
+      </div>
+      <div class="footer__links">
+        <a href="#features">Features</a>
+        <a href="#workflow">Workflow</a>
+        <a href="render.html">Editor</a>
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <span class="footer__copy">© 2026 SCAD Studio</span>
+    </div>
+  </footer>
+
+  <script type="module" src="/js/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SCAD Studio — Editor</title>
+  <meta name="description" content="Write SCAD code and preview 3D models in real-time with SCAD Studio's powerful browser-based editor." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◇</text></svg>" />
+  <link rel="stylesheet" href="/css/global.css" />
+  <link rel="stylesheet" href="/css/render.css" />
+</head>
+<body>
+
+  <!-- ─── Loading Screen ─────────────────────────── -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-screen__content">
+      <div class="loading-screen__logo">
+        <div class="loading-screen__icon">◇</div>
+        <span>SCAD Studio</span>
+      </div>
+      <div class="loading-screen__bar">
+        <div class="loading-screen__bar-fill"></div>
+      </div>
+      <span class="loading-screen__text">Initializing engine...</span>
+    </div>
+  </div>
+
+  <div class="render-app">
+
+    <!-- ─── Toolbar ──────────────────────────────── -->
+    <div class="toolbar">
+      <div class="toolbar__left">
+        <a href="/" class="toolbar__logo">
+          <div class="toolbar__logo-icon">◇</div>
+          SCAD Studio
+        </a>
+        <div class="toolbar__sep"></div>
+        <span class="toolbar__filename" id="filename" contenteditable="true" spellcheck="false">untitled.scad</span>
+      </div>
+      <div class="toolbar__center">
+        <button class="toolbar-btn toolbar-btn--ghost" id="btn-save" title="Save (Ctrl+S)">
+          <span>💾</span> Save
+        </button>
+        <button class="toolbar-btn toolbar-btn--ghost" id="btn-load" title="Load file">
+          <span>📂</span> Load
+        </button>
+        <div class="toolbar__sep"></div>
+        <button class="toolbar-btn toolbar-btn--ghost" id="btn-screenshot" title="Screenshot (PNG)">
+          <span>📷</span> Screenshot
+        </button>
+        <button class="toolbar-btn toolbar-btn--accent" id="btn-export" title="Export as STL">
+          <span>⭳</span> Export STL
+        </button>
+        <div class="toolbar__sep"></div>
+        <button class="toolbar-btn toolbar-btn--primary" id="btn-render" title="Render model (Ctrl+Enter)">
+          <span>▶</span> Render
+        </button>
+      </div>
+      <div class="toolbar__right">
+        <button class="btn-icon" id="btn-templates" title="Templates">
+          <span>📋</span>
+        </button>
+        <button class="btn-icon" id="btn-history" title="Generations History">
+          <span>🕒</span>
+        </button>
+        <button class="btn-icon" id="btn-wireframe" title="Toggle wireframe (W)">
+          <span>◆</span>
+        </button>
+        <button class="btn-icon" id="btn-grid" title="Toggle grid (G)">
+          <span>▦</span>
+        </button>
+        <button class="btn-icon" id="btn-reset-camera" title="Reset camera">
+          <span>⌖</span>
+        </button>
+        <button class="btn-icon" id="btn-shortcuts" title="Keyboard shortcuts (?)">
+          <span>⌨</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Split Pane ───────────────────────────── -->
+    <div class="split-pane">
+
+      <!-- Editor -->
+      <div class="editor-panel" id="editor-panel">
+        <div class="editor-panel__header">
+          <div class="editor-panel__tabs">
+            <button class="editor__tab active" id="tab-code">Code</button>
+            <button class="editor__tab" id="tab-console">Console</button>
+          </div>
+        </div>
+        <div class="editor-panel__body" id="editor-container"></div>
+        <div class="console-panel" id="console-container" style="display:none;">
+          <div class="console-panel__output" id="console-output"></div>
+        </div>
+      </div>
+
+      <!-- Resize Handle -->
+      <div class="resize-handle" id="resize-handle"></div>
+
+      <!-- 3D Preview -->
+      <div class="preview-panel" id="preview-panel">
+        <canvas id="preview-canvas"></canvas>
+
+        <!-- Empty State -->
+        <div class="preview-empty" id="preview-empty">
+          <div class="preview-empty__icon">◇</div>
+          <div class="preview-empty__text">No model rendered</div>
+          <div class="preview-empty__hint">Press Ctrl+Enter or click Render</div>
+        </div>
+
+        <!-- Overlays -->
+        <div class="preview-overlay preview-overlay--top-left">
+          <div class="preview-info" id="preview-info">
+            <div class="preview-info__item">
+              <span class="preview-info__dot"></span>
+              <span id="info-status">Ready</span>
+            </div>
+          </div>
+        </div>
+        <div class="preview-overlay preview-overlay--top-right">
+          <div class="view-controls">
+            <button class="view-btn" id="view-front" title="Front view (F)">F</button>
+            <button class="view-btn" id="view-top" title="Top view (T)">T</button>
+            <button class="view-btn" id="view-right" title="Right view (R)">R</button>
+            <button class="view-btn" id="view-iso" title="Isometric view (I)">I</button>
+          </div>
+        </div>
+        <div class="preview-overlay preview-overlay--bottom-left">
+          <div class="ai-mini-panel" id="ai-mini-panel">
+            <div class="ai-mini-panel__title">AI SCAD Chat</div>
+            <textarea id="ai-chat-input" class="ai-mini-panel__input" rows="2" placeholder="Describe the model or changes..."></textarea>
+            <div class="ai-mini-panel__actions">
+              <button class="ai-mini-panel__btn" id="btn-ai-generate" title="Generate with Sonnet">Generate</button>
+            </div>
+            <div class="ai-mini-panel__status" id="ai-chat-status">Prompt Sonnet to generate or revise full SCAD code.</div>
+            <div class="ai-mini-panel__hint" id="ai-face-hint">Click a face in the model to open a targeted Haiku edit.</div>
+          </div>
+        </div>
+        <div class="preview-overlay preview-overlay--bottom-right">
+          <div class="axes-hud">
+            <canvas id="axes-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="face-edit-popover" id="face-edit-popover">
+          <div class="face-edit-popover__header">
+            <div class="face-edit-popover__title">Face Edit (Haiku)</div>
+            <button class="face-edit-popover__close" id="face-edit-close" title="Close">âœ•</button>
+          </div>
+          <div class="face-edit-popover__meta" id="face-edit-meta"></div>
+          <textarea id="face-edit-input" class="face-edit-popover__input" rows="3" placeholder="Describe what to change on this selected area..."></textarea>
+          <div class="face-edit-popover__actions">
+            <button class="face-edit-popover__btn" id="face-edit-apply">Apply Edit</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── Status Bar ───────────────────────────── -->
+    <div class="status-bar">
+      <div class="status-bar__left">
+        <div class="status-indicator">
+          <span class="status-indicator__dot" id="status-dot"></span>
+          <span id="status-text">Ready</span>
+        </div>
+      </div>
+      <div class="status-bar__right">
+        <span id="status-vertices">Vertices: 0</span>
+        <span id="status-faces">Faces: 0</span>
+        <span id="status-fps">60 FPS</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div class="render-toast" id="render-toast"></div>
+
+  <!-- ─── Keyboard Shortcut Modal ─────────────────── -->
+  <div class="modal-overlay" id="shortcut-modal">
+    <div class="modal glass">
+      <div class="modal__header">
+        <h3 class="modal__title">⌨ Keyboard Shortcuts</h3>
+        <button class="modal__close" id="modal-close">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="shortcut-group">
+          <h4>Editor</h4>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Render model</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save file</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>E</kbd><span>Export STL</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd><span>Screenshot</span></div>
+        </div>
+        <div class="shortcut-group">
+          <h4>3D Viewport</h4>
+          <div class="shortcut-row"><kbd>F</kbd><span>Front view</span></div>
+          <div class="shortcut-row"><kbd>T</kbd><span>Top view</span></div>
+          <div class="shortcut-row"><kbd>R</kbd><span>Right view</span></div>
+          <div class="shortcut-row"><kbd>I</kbd><span>Isometric view</span></div>
+          <div class="shortcut-row"><kbd>W</kbd><span>Toggle wireframe</span></div>
+          <div class="shortcut-row"><kbd>G</kbd><span>Toggle grid</span></div>
+        </div>
+        <div class="shortcut-group">
+          <h4>General</h4>
+          <div class="shortcut-row"><kbd>?</kbd><span>Show this modal</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Templates Sidebar ──────────────────────── -->
+  <div class="templates-sidebar" id="templates-sidebar">
+    <div class="templates-sidebar__header">
+      <h3>📋 Templates</h3>
+      <button class="templates-sidebar__close" id="templates-close">✕</button>
+    </div>
+    <div class="templates-sidebar__list" id="templates-list"></div>
+  </div>
+
+  <!-- ─── History Sidebar ────────────────────────── -->
+  <div class="templates-sidebar" id="history-sidebar">
+    <div class="templates-sidebar__header">
+      <h3>🕒 History</h3>
+      <button class="templates-sidebar__close" id="history-close">✕</button>
+    </div>
+    <div class="templates-sidebar__list" id="history-list"></div>
+  </div>
+
+  <!-- ─── Load Files Modal ───────────────────────── -->
+  <div class="modal-overlay" id="load-modal">
+    <div class="modal glass">
+      <div class="modal__header">
+        <h3 class="modal__title">📂 Saved Files</h3>
+        <button class="modal__close" id="load-modal-close">✕</button>
+      </div>
+      <div class="modal__body">
+        <div id="saved-files-list" class="saved-files-list"></div>
+        <div class="load-modal__empty" id="load-modal-empty">No saved files yet. Press Ctrl+S to save your work.</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/render.js"></script>
+</body>
+</html>
