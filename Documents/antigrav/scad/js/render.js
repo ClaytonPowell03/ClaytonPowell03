@@ -124,7 +124,7 @@ function formatNumber(value) {
 }
 
 function formatSelectionLabel(selection) {
-  if (!selection) return 'Click a face in the model to open a targeted Haiku edit.';
+  if (!selection) return 'Click a face in the model to open a targeted Gemini edit.';
   const primitive = selection.meta?.primitive || selection.meta?.operation || 'geometry';
   const line = selection.meta?.line ? `line ${selection.meta.line}` : 'source hint unavailable';
   return `Selected: ${primitive} (${line}).`;
@@ -308,7 +308,7 @@ function renderModel() {
         scene3d.setModel(group);
         selectedFaceContext = null;
         hideFaceEditPopover();
-        updateFaceHint('Click a face in the model to open a targeted Haiku edit.');
+        updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
 
         statusText.textContent = `Rendered in ${elapsed}ms`;
         infoStatus.textContent = `Rendered · ${elapsed}ms`;
@@ -637,17 +637,17 @@ function initAIChat() {
     }
 
     setButtonBusy('btn-ai-generate', true, 'Generating...', 'Generate');
-    updateAIStatus('Asking Sonnet to generate SCAD...');
-    consoleLog('Sending prompt to Sonnet model', 'info');
+    updateAIStatus('Asking Gemini 3.1 Pro to generate SCAD...');
+    consoleLog('Sending prompt to Gemini 3.1 Pro model', 'info');
 
     try {
       const result = await requestScadFromApi('/api/chat/generate', {
         prompt,
         currentCode: getEditorContent(),
       });
-      applyGeneratedCode(result.scadCode, result.model || 'Sonnet');
-      addToHistory(prompt, result.model || 'Sonnet', result.scadCode);
-      updateAIStatus(`Generated with ${result.model || 'Sonnet'}.`);
+      applyGeneratedCode(result.scadCode, result.model || 'Gemini 3.1 Pro');
+      addToHistory(prompt, result.model || 'Gemini 3.1 Pro', result.scadCode);
+      updateAIStatus(`Generated with ${result.model || 'Gemini 3.1 Pro'}.`);
       chatInput.value = '';
     } catch (err) {
       const msg = err?.message || 'AI request failed.';
@@ -673,8 +673,8 @@ function initAIChat() {
     }
 
     setButtonBusy('face-edit-apply', true, 'Applying...', 'Apply Edit');
-    updateAIStatus('Asking Haiku to patch selected area...');
-    consoleLog('Sending face-edit prompt to Haiku model', 'info');
+    updateAIStatus('Asking Gemini 3.1 Pro to patch selected area...');
+    consoleLog('Sending face-edit prompt to Gemini 3.1 Pro model', 'info');
 
     try {
       const result = await requestScadFromApi('/api/chat/face-edit', {
@@ -682,9 +682,9 @@ function initAIChat() {
         selection: selectedFaceContext,
         currentCode: getEditorContent(),
       });
-      applyGeneratedCode(result.scadCode, result.model || 'Haiku');
-      addToHistory(prompt, result.model || 'Haiku', result.scadCode);
-      updateAIStatus(`Face edit applied with ${result.model || 'Haiku'}.`);
+      applyGeneratedCode(result.scadCode, result.model || 'Gemini 3.1 Pro');
+      addToHistory(prompt, result.model || 'Gemini 3.1 Pro', result.scadCode);
+      updateAIStatus(`Face edit applied with ${result.model || 'Gemini 3.1 Pro'}.`);
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
@@ -730,7 +730,7 @@ function initAIChat() {
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
-      updateFaceHint('Click a face in the model to open a targeted Haiku edit.');
+      updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
     });
   }
 }
@@ -856,7 +856,7 @@ function initShortcuts() {
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
-      updateFaceHint('Click a face in the model to open a targeted Haiku edit.');
+      updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
       return;
     }
 
@@ -909,8 +909,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initAIChat();
   initTemplates();
   initHistory();
-  updateAIStatus('Prompt Sonnet to generate or revise full SCAD code.');
-  updateFaceHint('Click a face in the model to open a targeted Haiku edit.');
+  updateAIStatus('Prompt Gemini 3.1 Pro to generate or revise full SCAD code.');
+  updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
 
   // Hide loading screen
   hideLoadingScreen();

@@ -26,7 +26,7 @@ const SUPPORTED_SCAD_DIALECT = [
   '- For complex assemblies, use nested translate/rotate with clear indentation.',
 ].join('\n');
 
-const SONNET_SYSTEM_PROMPT = [
+const GEMINI_SYSTEM_PROMPT = [
   'You are an expert CAD engineer. You write OpenSCAD code for a custom web-based renderer.',
   'Your ABSOLUTE TOP PRIORITY is writing code that the custom parser can handle without errors.',
   'The custom parser only supports a very limited subset of OpenSCAD — read the constraints carefully.',
@@ -41,7 +41,7 @@ const SONNET_SYSTEM_PROMPT = [
   SUPPORTED_SCAD_DIALECT,
 ].join('\n');
 
-const HAIKU_SYSTEM_PROMPT = [
+const GEMINI_EDIT_SYSTEM_PROMPT = [
   'You are an OpenSCAD expert editor for a custom web-based renderer with limited syntax support.',
   'You receive existing code plus selected-face context from a 3D pick.',
   'Change the minimum necessary code to satisfy the request while strictly preserving unrelated geometry.',
@@ -59,7 +59,6 @@ function sendJson(res, statusCode, payload) {
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let raw = '';
-
     req.on('data', (chunk) => {
       raw += chunk;
       if (raw.length > MAX_REQUEST_BYTES) {
@@ -67,20 +66,12 @@ function readJsonBody(req) {
         req.destroy();
       }
     });
-
     req.on('end', () => {
-      if (!raw) {
-        resolve({});
-        return;
-      }
-      try {
-        resolve(JSON.parse(raw));
-      } catch (err) {
-        reject(new Error('Invalid JSON body.'));
-      }
+      if (!raw) return resolve({});
+      try { resolve(JSON.parse(raw)); }
+      catch (err) { reject(new Error('Invalid JSON body.')); }
     });
-
-    req.on('error', (err) => reject(err));
+    req.on('error', reject);
   });
 }
 
@@ -93,8 +84,7 @@ function buildLineStarts(source) {
 }
 
 function toLineNumber(index, lineStarts) {
-  let low = 0;
-  let high = lineStarts.length - 1;
+  let low = 0, high = lineStarts.length - 1;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
     if (lineStarts[mid] <= index) low = mid + 1;
@@ -105,7 +95,6 @@ function toLineNumber(index, lineStarts) {
 
 function buildSelectionSummary(selection, currentCode) {
   if (!selection || typeof selection !== 'object') return 'No face selection context provided.';
-
   const meta = selection.meta || {};
   const point = Array.isArray(selection.worldPoint) ? selection.worldPoint.map((v) => Number(v).toFixed(3)).join(', ') : 'n/a';
   const normal = Array.isArray(selection.worldNormal) ? selection.worldNormal.map((v) => Number(v).toFixed(3)).join(', ') : 'n/a';
@@ -129,12 +118,12 @@ function buildSelectionSummary(selection, currentCode) {
   ].join('\n');
 }
 
-function extractTextFromAnthropic(responseJson) {
-  const blocks = responseJson?.content;
-  if (!Array.isArray(blocks)) return '';
-  return blocks
-    .filter((block) => block?.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text)
+function extractTextFromGemini(responseJson) {
+  const candidate = responseJson?.candidates?.[0];
+  if (!candidate || !candidate.content || !candidate.content.parts) return '';
+  return candidate.content.parts
+    .filter(p => typeof p.text === 'string')
+    .map(p => p.text)
     .join('\n')
     .trim();
 }
@@ -146,43 +135,28 @@ function extractScad(text) {
   return text.trim();
 }
 
-async function callAnthropic({ apiKey, model, system, userPrompt, maxTokens = 2200 }) {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+async function callGemini({ apiKey, model, system, userPrompt, maxTokens = 4096 }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      temperature: 0.2,
-      system,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    }),
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens }
+    })
   });
 
   const bodyText = await response.text();
   let payload = null;
-  try {
-    payload = bodyText ? JSON.parse(bodyText) : {};
-  } catch {
-    payload = null;
-  }
+  try { payload = bodyText ? JSON.parse(bodyText) : {}; }
+  catch { payload = null; }
 
   if (!response.ok) {
-    const message = payload?.error?.message || bodyText || `Anthropic request failed (${response.status}).`;
-    const err = new Error(message);
+    const err = new Error(payload?.error?.message || bodyText || `Gemini request failed (${response.status}).`);
     err.statusCode = response.status;
     throw err;
   }
-
   return payload;
 }
 
@@ -191,43 +165,36 @@ async function handleGenerate(req, res, env) {
   const prompt = (body?.prompt || '').trim();
   const currentCode = typeof body?.currentCode === 'string' ? body.currentCode : '';
 
-  if (!prompt) {
-    sendJson(res, 400, { error: 'Missing prompt.' });
-    return;
-  }
+  if (!prompt) return sendJson(res, 400, { error: 'Missing prompt.' });
 
   const userPrompt = [
     'Create or revise OpenSCAD code for the following request.',
     '',
     'RULES (in priority order):',
     '1) The code MUST parse successfully in the supported dialect. No unsupported features.',
-    '2) The geometry MUST actually represent what the user asked for. If they ask for "a car", build something that looks like a car. If they ask for "a Rubik\'s cube", build a 3x3x3 grid of colored cubes.',
+    '2) The geometry MUST actually represent what the user asked for.',
     '3) Use clean, readable structure with named variables for key dimensions.',
     '4) Use $fn=40 on all curved primitives.',
     '5) Return ONLY valid OpenSCAD code. No markdown, no explanations.',
     '',
     `User request: ${prompt}`,
     '',
-    currentCode
-      ? `Current SCAD code (revise when appropriate):\n${currentCode}`
-      : 'There is no existing code. Generate from scratch.',
+    currentCode ? `Current SCAD code (revise when appropriate):\n${currentCode}` : 'There is no existing code. Generate from scratch.'
   ].join('\n');
 
-  const response = await callAnthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
-    model: env.ANTHROPIC_SONNET_MODEL || 'claude-sonnet-4-0',
+  const model = env.GEMINI_MODEL || 'gemini-3.1-pro';
+  const response = await callGemini({
+    apiKey: env.GEMINI_API_KEY,
+    model: model,
     maxTokens: 4096,
-    system: SONNET_SYSTEM_PROMPT,
-    userPrompt,
+    system: GEMINI_SYSTEM_PROMPT,
+    userPrompt
   });
 
-  const scadCode = extractScad(extractTextFromAnthropic(response));
-  if (!scadCode) {
-    sendJson(res, 502, { error: 'Model returned an empty response.' });
-    return;
-  }
+  const scadCode = extractScad(extractTextFromGemini(response));
+  if (!scadCode) return sendJson(res, 502, { error: 'Model returned an empty response.' });
 
-  sendJson(res, 200, { scadCode, model: response?.model || env.ANTHROPIC_SONNET_MODEL || 'claude-sonnet-4-0' });
+  sendJson(res, 200, { scadCode, model });
 }
 
 async function handleFaceEdit(req, res, env) {
@@ -236,14 +203,8 @@ async function handleFaceEdit(req, res, env) {
   const currentCode = typeof body?.currentCode === 'string' ? body.currentCode : '';
   const selection = body?.selection;
 
-  if (!prompt) {
-    sendJson(res, 400, { error: 'Missing face-edit prompt.' });
-    return;
-  }
-  if (!currentCode.trim()) {
-    sendJson(res, 400, { error: 'Missing current SCAD code.' });
-    return;
-  }
+  if (!prompt) return sendJson(res, 400, { error: 'Missing face-edit prompt.' });
+  if (!currentCode.trim()) return sendJson(res, 400, { error: 'Missing current SCAD code.' });
 
   const userPrompt = [
     'Patch the existing OpenSCAD based on a selected face/region and the requested change.',
@@ -258,53 +219,48 @@ async function handleFaceEdit(req, res, env) {
     '',
     `Requested edit: ${prompt}`,
     '',
-    `Current SCAD:\n${currentCode}`,
+    `Current SCAD:\n${currentCode}`
   ].join('\n');
 
-  const response = await callAnthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
-    model: env.ANTHROPIC_HAIKU_MODEL || 'claude-3-5-haiku-latest',
-    maxTokens: 2200,
-    system: HAIKU_SYSTEM_PROMPT,
-    userPrompt,
+  const model = env.GEMINI_MODEL || 'gemini-3.1-pro';
+  const response = await callGemini({
+    apiKey: env.GEMINI_API_KEY,
+    model: model,
+    maxTokens: 2500,
+    system: GEMINI_EDIT_SYSTEM_PROMPT,
+    userPrompt
   });
 
-  const scadCode = extractScad(extractTextFromAnthropic(response));
-  if (!scadCode) {
-    sendJson(res, 502, { error: 'Model returned an empty response.' });
-    return;
-  }
+  const scadCode = extractScad(extractTextFromGemini(response));
+  if (!scadCode) return sendJson(res, 502, { error: 'Model returned an empty response.' });
 
-  sendJson(res, 200, { scadCode, model: response?.model || env.ANTHROPIC_HAIKU_MODEL || 'claude-3-5-haiku-latest' });
+  sendJson(res, 200, { scadCode, model });
 }
 
-export function createAnthropicApiMiddleware(env) {
+export function createGeminiApiMiddleware(env) {
   return async (req, res, next) => {
     const method = req.method || 'GET';
     const url = req.url || '';
     const pathname = url.split('?')[0];
 
     if (pathname !== '/api/chat/generate' && pathname !== '/api/chat/face-edit') {
-      next();
-      return;
+      return next();
     }
 
-    if (!env.ANTHROPIC_API_KEY) {
-      sendJson(res, 500, { error: 'Missing ANTHROPIC_API_KEY on server.' });
-      return;
+    if (!env.GEMINI_API_KEY) {
+      return sendJson(res, 500, { error: 'Missing GEMINI_API_KEY on server.' });
     }
 
     if (method !== 'POST') {
-      sendJson(res, 405, { error: 'Method not allowed. Use POST.' });
-      return;
+      return sendJson(res, 405, { error: 'Method not allowed. Use POST.' });
     }
 
     try {
       if (pathname === '/api/chat/generate') {
         await handleGenerate(req, res, env);
-        return;
+      } else {
+        await handleFaceEdit(req, res, env);
       }
-      await handleFaceEdit(req, res, env);
     } catch (err) {
       const statusCode = err?.statusCode || 500;
       sendJson(res, statusCode, { error: err?.message || 'Unhandled server error.' });

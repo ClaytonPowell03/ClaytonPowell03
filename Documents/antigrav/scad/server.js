@@ -2,7 +2,7 @@ import express from 'express';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { createAnthropicApiMiddleware } from './server/anthropic-api.js';
+import { createGeminiApiMiddleware } from './server/gemini-api.js';
 
 // Load local .env into process.env if present
 dotenv.config();
@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Mount the custom api middleware
-const apiMiddleware = createAnthropicApiMiddleware(process.env);
+const apiMiddleware = createGeminiApiMiddleware(process.env);
 app.use(apiMiddleware); // Mount at root so req.url retains full path
 
 // Serve the production build artifacts

@@ -1,8 +1,8 @@
-import { createAnthropicApiMiddleware } from '../server/anthropic-api.js';
+import { createGeminiApiMiddleware } from '../server/gemini-api.js';
 
 export default async function handler(req, res) {
   // Pass the serverless Vercel environment to the middleware
-  const middleware = createAnthropicApiMiddleware(process.env);
+  const middleware = createGeminiApiMiddleware(process.env);
   
   // Call the middleware with Vercel's Edge/Serverless request API. 
   // It handles its own responses or passes execution to next() 

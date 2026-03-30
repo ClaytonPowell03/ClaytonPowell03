@@ -1,11 +1,11 @@
 import { defineConfig, loadEnv } from 'vite';
 import { resolve } from 'path';
-import { createAnthropicApiMiddleware } from './server/anthropic-api.js';
+import { createGeminiApiMiddleware } from './server/gemini-api.js';
 
-function anthropicApiPlugin(env) {
-  const middleware = createAnthropicApiMiddleware(env);
+function geminiApiPlugin(env) {
+  const middleware = createGeminiApiMiddleware(env);
   return {
-    name: 'scad-anthropic-api',
+    name: 'scad-gemini-api',
     configureServer(server) {
       server.middlewares.use(middleware);
     },
@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
   const env = { ...process.env, ...loaded };
 
   return {
-    plugins: [anthropicApiPlugin(env)],
+    plugins: [geminiApiPlugin(env)],
     build: {
       rollupOptions: {
         input: {
