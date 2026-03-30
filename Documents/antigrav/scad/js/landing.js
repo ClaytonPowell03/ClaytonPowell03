@@ -4,6 +4,9 @@
 
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 // ── Particles ────────────────────────────────────────
 async function initParticles() {

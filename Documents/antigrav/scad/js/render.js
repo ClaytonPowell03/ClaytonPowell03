@@ -15,6 +15,9 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { createScene, createAxesHUD } from './three-scene.js';
 import { parseSCAD } from './scad-parser.js';
 import { TEMPLATES } from './templates.js';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 // ── Sample SCAD Code ────────────────────────────────
 const SAMPLE_CODE = `// SCAD Studio — Welcome!
