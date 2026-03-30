@@ -1078,3 +1078,40 @@ kbd {
     width: min(240px, 58vw);
   }
 }
+
+/* ── Mobile Layout ─────────────────────────────────── */
+.mobile-code-toggle {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-code-toggle {
+    display: inline-flex !important;
+  }
+
+  /* Default on mobile: Hide editor, show preview */
+  .editor-panel {
+    display: none !important;
+  }
+  .resize-handle {
+    display: none !important;
+  }
+  .preview-panel {
+    display: block !important;
+  }
+
+  /* When body has class 'mobile-code-active', flip it */
+  body.mobile-code-active .editor-panel {
+    display: flex !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  body.mobile-code-active .preview-panel {
+    display: none !important;
+  }
+  
+  /* Make sure the toolbar is scrollable if needed */
+  .toolbar {
+    overflow-x: auto;
+  }
+}

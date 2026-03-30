@@ -798,6 +798,16 @@ function initToolbar() {
   document.getElementById('view-top').addEventListener('click', () => scene3d.setView('top'));
   document.getElementById('view-right').addEventListener('click', () => scene3d.setView('right'));
   document.getElementById('view-iso').addEventListener('click', () => scene3d.setView('iso'));
+
+  // Mobile Code Toggle
+  const btnMobileCode = document.getElementById('btn-mobile-code');
+  if (btnMobileCode) {
+    btnMobileCode.addEventListener('click', () => {
+      document.body.classList.toggle('mobile-code-active');
+      const isActive = document.body.classList.contains('mobile-code-active');
+      btnMobileCode.classList.toggle('active', isActive);
+    });
+  }
 }
 
 // ── Keyboard Shortcuts ──────────────────────────────
