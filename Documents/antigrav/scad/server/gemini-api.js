@@ -1,55 +1,88 @@
+/* ═══════════════════════════════════════════════════════
+   scAId — Gemini 3.1 Pro API Backend
+   ═══════════════════════════════════════════════════════ */
+
 const MAX_REQUEST_BYTES = 1_000_000;
-const SUPPORTED_SCAD_DIALECT = [
-  'You are writing code for a CUSTOM OpenSCAD renderer with a LIMITED subset of OpenSCAD.',
-  '',
-  'SUPPORTED PRIMITIVES: cube, sphere, cylinder, cone, circle, square.',
-  'SUPPORTED TRANSFORMS: translate, rotate, scale, color, union, difference, intersection, linear_extrude, rotate_extrude.',
-  'SUPPORTED CONTROL FLOW: variable assignment (x = 5;), for-loops (for (i = [0:1:5]) { ... }), if-blocks, numeric expressions (+ - * / %), ranges [start:step:end].',
-  '',
-  'CRITICAL CONSTRAINTS — VIOLATING THESE WILL CAUSE A PARSE ERROR:',
-  '- Do NOT use module or function declarations. Inline all geometry directly.',
-  '- Do NOT use include, use, import(), text(), polyhedron(), offset(), projection(), minkowski(), hull(), resize(), mirror(), multmatrix(), render(), surface(), polygon().',
-  '- Do NOT use let(), assert(), echo(), each, list comprehensions, ternary (?:), logical operators (&&, ||, !), or comparison operators (==, !=, <, >, <=, >=).',
-  '- Do NOT use string concatenation or str().',
-  '- Do NOT use $fa, $fs as special variables. Only $fn is supported.',
-  '',
-  'OUTPUT FORMAT:',
-  '- Return ONLY raw OpenSCAD code. No markdown fences (```), no explanations, no comments about what you did.',
-  '- Every primitive statement MUST end with a semicolon.',
-  '- Every block (difference, union, translate, etc.) must use properly matched braces { }.',
-  '',
-  'BEST PRACTICES:',
-  '- Parametrize key dimensions with named variables at the top of the script.',
-  '- Use $fn=40 on all cylinder() and sphere() calls for smooth rendering.',
-  '- Prefer center=true on cube/cylinder to simplify alignment.',
-  '- In difference(), make cutout volumes 0.1 larger than needed and offset by -0.05 to avoid Z-fighting.',
-  '- For complex assemblies, use nested translate/rotate with clear indentation.',
-].join('\n');
 
-const GEMINI_SYSTEM_PROMPT = [
-  'You are an expert CAD engineer. You write OpenSCAD code for a custom web-based renderer.',
-  'Your ABSOLUTE TOP PRIORITY is writing code that the custom parser can handle without errors.',
-  'The custom parser only supports a very limited subset of OpenSCAD — read the constraints carefully.',
-  '',
-  'When the user asks you to model something specific (e.g. "a Rubik\'s cube", "a chess piece", "a house"):',
-  '- You MUST create geometry that actually looks like that object.',
-  '- Break the object into its recognizable visual components using only the supported primitives and transforms.',
-  '- A "Rubik\'s cube" should be a 3x3x3 grid of small colored cubes, NOT a vase or random shape.',
-  '- A "chess knight" should have a recognizable horse-head silhouette built from primitives.',
-  '- Think carefully about what makes each object visually recognizable before writing code.',
-  '',
-  SUPPORTED_SCAD_DIALECT,
-].join('\n');
+// ── System Prompt: Generation ────────────────────────
+// This prompt is a precise technical reference card for the
+// model. It mirrors exactly what scad-parser.js can tokenize,
+// parse, evaluate, and render via Three.js + CSG.
+const SYSTEM_PROMPT_GENERATE = `
+You are scAId, an expert 3D‑modeling assistant.
+Your job is to write OpenSCAD code that a LIMITED browser‑based renderer can parse and display.
+Think carefully about every object the user describes — break it into its visually recognizable parts and compose them from the primitives listed below.
 
-const GEMINI_EDIT_SYSTEM_PROMPT = [
-  'You are an OpenSCAD expert editor for a custom web-based renderer with limited syntax support.',
-  'You receive existing code plus selected-face context from a 3D pick.',
-  'Change the minimum necessary code to satisfy the request while strictly preserving unrelated geometry.',
-  'Keep variable names, style, and comments consistent with the original code.',
-  '',
-  SUPPORTED_SCAD_DIALECT,
-].join('\n');
+─── RENDERER REFERENCE ────────────────────────────────
 
+PRIMITIVES (each must end with a semicolon):
+  cube(size = [x,y,z], center = true|false)
+  sphere(r = N, $fn = N)
+  cylinder(h = N, r = N, r1 = N, r2 = N, d = N, center = true|false, $fn = N)
+  cone(h = N, r1 = N, r2 = N, $fn = N, center = true|false)
+  circle(r = N, $fn = N)            — 2D, use inside linear_extrude
+  square(size = [x,y], center = true|false)  — 2D, use inside linear_extrude
+
+TRANSFORMS (wrap children in braces):
+  translate([x, y, z]) { … }
+  rotate([x, y, z]) { … }        — degrees
+  scale([x, y, z]) { … }
+  color([r, g, b]) { … }          — floats 0‑1
+
+BOOLEAN / CSG:
+  union() { … }
+  difference() { … }              — first child is base, rest are subtracted
+  intersection() { … }
+
+EXTRUSION:
+  linear_extrude(height = N) { … } — extrudes 2D child (circle / square) into 3D
+
+LANGUAGE:
+  Variables:       height = 10;
+  For‑loops:       for (i = [0:1:5]) { … }     — range [start:step:end]
+  If‑blocks:       if (condition) { … }
+  Expressions:     + - * / %    parentheses OK
+  Comments:        // single   /* multi */
+  $fn:             controls curve smoothness (use 40+ for nice results)
+
+─── HARD CONSTRAINTS ──────────────────────────────────
+
+The renderer will CRASH on any of the following — never emit them:
+  module / function declarations, include, use, import,
+  text(), polyhedron(), polygon(), offset(), projection(),
+  minkowski(), hull(), resize(), mirror(), multmatrix(),
+  render(), surface(),
+  let(), assert(), echo(), each,
+  list comprehensions, ternary (? :),
+  logical operators (&&  ||  !),
+  comparison operators (==  !=  <  >  <=  >=),
+  string functions (str(), concat()), $fa, $fs.
+
+─── OUTPUT RULES ──────────────────────────────────────
+
+1. Return ONLY raw OpenSCAD code. No markdown fences, no prose, no explanations.
+2. Every primitive call ends with a semicolon.
+3. Every transform / boolean block uses matched braces { }.
+4. Parametrize key dimensions at the top with named variables.
+5. Use $fn = 40 on every cylinder and sphere.
+6. For difference(), oversize cutouts by 0.1 and offset by −0.05 to prevent z‑fighting.
+7. Use color() liberally — colorful models look much better in the preview.
+`.trim();
+
+// ── System Prompt: Face Edit ─────────────────────────
+const SYSTEM_PROMPT_FACE_EDIT = `
+You are scAId, an OpenSCAD editor for a limited browser‑based renderer.
+You receive the user's EXISTING code plus metadata about a face they clicked in the 3D viewport.
+Your task: apply the user's requested change with MINIMAL edits.
+
+Rules:
+1. Preserve all unrelated geometry exactly as‑is.
+2. Keep the same variable names, indentation style, and comments.
+3. Return the FULL updated script — raw code only, no markdown, no explanations.
+4. Stay within the renderer's supported dialect (same constraints as the generation prompt).
+`.trim();
+
+// ── Utilities ────────────────────────────────────────
 function sendJson(res, statusCode, payload) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json');
@@ -69,7 +102,7 @@ function readJsonBody(req) {
     req.on('end', () => {
       if (!raw) return resolve({});
       try { resolve(JSON.parse(raw)); }
-      catch (err) { reject(new Error('Invalid JSON body.')); }
+      catch { reject(new Error('Invalid JSON body.')); }
     });
     req.on('error', reject);
   });
@@ -77,7 +110,7 @@ function readJsonBody(req) {
 
 function buildLineStarts(source) {
   const starts = [0];
-  for (let i = 0; i < source.length; i += 1) {
+  for (let i = 0; i < source.length; i++) {
     if (source[i] === '\n') starts.push(i + 1);
   }
   return starts;
@@ -96,8 +129,9 @@ function toLineNumber(index, lineStarts) {
 function buildSelectionSummary(selection, currentCode) {
   if (!selection || typeof selection !== 'object') return 'No face selection context provided.';
   const meta = selection.meta || {};
-  const point = Array.isArray(selection.worldPoint) ? selection.worldPoint.map((v) => Number(v).toFixed(3)).join(', ') : 'n/a';
-  const normal = Array.isArray(selection.worldNormal) ? selection.worldNormal.map((v) => Number(v).toFixed(3)).join(', ') : 'n/a';
+  const fmt = (v) => Number(v).toFixed(3);
+  const point = Array.isArray(selection.worldPoint) ? selection.worldPoint.map(fmt).join(', ') : 'n/a';
+  const normal = Array.isArray(selection.worldNormal) ? selection.worldNormal.map(fmt).join(', ') : 'n/a';
   const faceIndex = Number.isInteger(selection.faceIndex) ? selection.faceIndex : 'n/a';
 
   let inferredLine = 'n/a';
@@ -108,19 +142,20 @@ function buildSelectionSummary(selection, currentCode) {
   }
 
   return [
-    `Primitive or op: ${meta.primitive || meta.operation || 'unknown'}`,
-    `Context chain: ${meta.contextPath || 'none'}`,
+    `Primitive/op: ${meta.primitive || meta.operation || 'unknown'}`,
+    `Context: ${meta.contextPath || 'none'}`,
     `Face index: ${faceIndex}`,
     `World point: [${point}]`,
     `World normal: [${normal}]`,
-    `Likely source line: ${inferredLine}`,
-    `Source snippet: ${meta.snippet || 'n/a'}`,
+    `Source line: ${inferredLine}`,
+    `Snippet: ${meta.snippet || 'n/a'}`,
   ].join('\n');
 }
 
+// ── Response extraction ──────────────────────────────
 function extractTextFromGemini(responseJson) {
   const candidate = responseJson?.candidates?.[0];
-  if (!candidate || !candidate.content || !candidate.content.parts) return '';
+  if (!candidate?.content?.parts) return '';
   return candidate.content.parts
     .filter(p => typeof p.text === 'string')
     .map(p => p.text)
@@ -135,31 +170,44 @@ function extractScad(text) {
   return text.trim();
 }
 
-async function callGemini({ apiKey, model, system, userPrompt, maxTokens = 4096 }) {
+// ── Gemini API call ──────────────────────────────────
+async function callGemini({ apiKey, model, system, userPrompt, maxOutputTokens = 16384 }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const body = {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens,
+      thinkingConfig: {
+        thinkingLevel: 'HIGH',
+      },
+    },
+  };
+
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: maxTokens }
-    })
+    body: JSON.stringify(body),
   });
 
-  const bodyText = await response.text();
+  const rawText = await response.text();
   let payload = null;
-  try { payload = bodyText ? JSON.parse(bodyText) : {}; }
+  try { payload = rawText ? JSON.parse(rawText) : {}; }
   catch { payload = null; }
 
   if (!response.ok) {
-    const err = new Error(payload?.error?.message || bodyText || `Gemini request failed (${response.status}).`);
+    const msg = payload?.error?.message || rawText || `Gemini request failed (${response.status}).`;
+    const err = new Error(msg);
     err.statusCode = response.status;
     throw err;
   }
+
   return payload;
 }
 
+// ── Route: /api/chat/generate ────────────────────────
 async function handleGenerate(req, res, env) {
   const body = await readJsonBody(req);
   const prompt = (body?.prompt || '').trim();
@@ -167,28 +215,17 @@ async function handleGenerate(req, res, env) {
 
   if (!prompt) return sendJson(res, 400, { error: 'Missing prompt.' });
 
-  const userPrompt = [
-    'Create or revise OpenSCAD code for the following request.',
-    '',
-    'RULES (in priority order):',
-    '1) The code MUST parse successfully in the supported dialect. No unsupported features.',
-    '2) The geometry MUST actually represent what the user asked for.',
-    '3) Use clean, readable structure with named variables for key dimensions.',
-    '4) Use $fn=40 on all curved primitives.',
-    '5) Return ONLY valid OpenSCAD code. No markdown, no explanations.',
-    '',
-    `User request: ${prompt}`,
-    '',
-    currentCode ? `Current SCAD code (revise when appropriate):\n${currentCode}` : 'There is no existing code. Generate from scratch.'
-  ].join('\n');
+  const userPrompt = currentCode
+    ? `The user already has this code:\n\`\`\`\n${currentCode}\n\`\`\`\n\nUser request: ${prompt}`
+    : `Generate OpenSCAD code from scratch.\n\nUser request: ${prompt}`;
 
-  const model = env.GEMINI_MODEL || 'gemini-3.1-pro';
+  const model = env.GEMINI_MODEL || 'gemini-3.1-pro-preview';
   const response = await callGemini({
     apiKey: env.GEMINI_API_KEY,
-    model: model,
-    maxTokens: 4096,
-    system: GEMINI_SYSTEM_PROMPT,
-    userPrompt
+    model,
+    maxOutputTokens: 16384,
+    system: SYSTEM_PROMPT_GENERATE,
+    userPrompt,
   });
 
   const scadCode = extractScad(extractTextFromGemini(response));
@@ -197,6 +234,7 @@ async function handleGenerate(req, res, env) {
   sendJson(res, 200, { scadCode, model });
 }
 
+// ── Route: /api/chat/face-edit ───────────────────────
 async function handleFaceEdit(req, res, env) {
   const body = await readJsonBody(req);
   const prompt = (body?.prompt || '').trim();
@@ -207,28 +245,20 @@ async function handleFaceEdit(req, res, env) {
   if (!currentCode.trim()) return sendJson(res, 400, { error: 'Missing current SCAD code.' });
 
   const userPrompt = [
-    'Patch the existing OpenSCAD based on a selected face/region and the requested change.',
-    '',
-    'Editing rules:',
-    '1) Modify only what is needed to satisfy the requested local change.',
-    '2) Keep unrelated geometry untouched.',
-    '3) Preserve file structure and ordering.',
-    '4) Return the FULL updated OpenSCAD script — raw code only, no markdown.',
-    '',
-    `Face selection context:\n${buildSelectionSummary(selection, currentCode)}`,
+    `Selected face context:\n${buildSelectionSummary(selection, currentCode)}`,
     '',
     `Requested edit: ${prompt}`,
     '',
-    `Current SCAD:\n${currentCode}`
+    `Current code:\n\`\`\`\n${currentCode}\n\`\`\``,
   ].join('\n');
 
-  const model = env.GEMINI_MODEL || 'gemini-3.1-pro';
+  const model = env.GEMINI_MODEL || 'gemini-3.1-pro-preview';
   const response = await callGemini({
     apiKey: env.GEMINI_API_KEY,
-    model: model,
-    maxTokens: 2500,
-    system: GEMINI_EDIT_SYSTEM_PROMPT,
-    userPrompt
+    model,
+    maxOutputTokens: 8192,
+    system: SYSTEM_PROMPT_FACE_EDIT,
+    userPrompt,
   });
 
   const scadCode = extractScad(extractTextFromGemini(response));
@@ -237,20 +267,18 @@ async function handleFaceEdit(req, res, env) {
   sendJson(res, 200, { scadCode, model });
 }
 
+// ── Middleware export ────────────────────────────────
 export function createGeminiApiMiddleware(env) {
   return async (req, res, next) => {
     const method = req.method || 'GET';
-    const url = req.url || '';
-    const pathname = url.split('?')[0];
+    const pathname = (req.url || '').split('?')[0];
 
     if (pathname !== '/api/chat/generate' && pathname !== '/api/chat/face-edit') {
       return next();
     }
-
     if (!env.GEMINI_API_KEY) {
       return sendJson(res, 500, { error: 'Missing GEMINI_API_KEY on server.' });
     }
-
     if (method !== 'POST') {
       return sendJson(res, 405, { error: 'Method not allowed. Use POST.' });
     }
