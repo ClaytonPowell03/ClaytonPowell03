@@ -124,7 +124,7 @@ function formatNumber(value) {
 }
 
 function formatSelectionLabel(selection) {
-  if (!selection) return 'Click a face in the model to open a targeted Gemini edit.';
+  if (!selection) return 'Click a face in the model to open a targeted AI edit.';
   const primitive = selection.meta?.primitive || selection.meta?.operation || 'geometry';
   const line = selection.meta?.line ? `line ${selection.meta.line}` : 'source hint unavailable';
   return `Selected: ${primitive} (${line}).`;
@@ -308,7 +308,7 @@ function renderModel() {
         scene3d.setModel(group);
         selectedFaceContext = null;
         hideFaceEditPopover();
-        updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
+        updateFaceHint('Click a face in the model to open a targeted AI edit.');
 
         statusText.textContent = `Rendered in ${elapsed}ms`;
         infoStatus.textContent = `Rendered · ${elapsed}ms`;
@@ -637,17 +637,17 @@ function initAIChat() {
     }
 
     setButtonBusy('btn-ai-generate', true, 'Generating...', 'Generate');
-    updateAIStatus('Asking Gemini 3.1 Pro... (this can take up to 4 minutes, do not be concerned)');
-    consoleLog('Sending prompt to Gemini 3.1 Pro model', 'info');
+    updateAIStatus('Asking AI... (this can take up to 4 minutes, do not be concerned)');
+    consoleLog('Sending prompt to AI model', 'info');
 
     try {
       const result = await requestScadFromApi('/api/chat/generate', {
         prompt,
         currentCode: getEditorContent(),
       });
-      applyGeneratedCode(result.scadCode, result.model || 'Gemini 3.1 Pro');
-      addToHistory(prompt, result.model || 'Gemini 3.1 Pro', result.scadCode);
-      updateAIStatus(`Generated with ${result.model || 'Gemini 3.1 Pro'}.`);
+      applyGeneratedCode(result.scadCode, result.model || 'AI');
+      addToHistory(prompt, result.model || 'AI', result.scadCode);
+      updateAIStatus(`Generated with ${result.model || 'AI'}.`);
       chatInput.value = '';
     } catch (err) {
       const msg = err?.message || 'AI request failed.';
@@ -673,8 +673,8 @@ function initAIChat() {
     }
 
     setButtonBusy('face-edit-apply', true, 'Applying...', 'Apply Edit');
-    updateAIStatus('Asking Gemini 3.1 Pro to patch area... (this can take up to 4 minutes, do not be concerned)');
-    consoleLog('Sending face-edit prompt to Gemini 3.1 Pro model', 'info');
+    updateAIStatus('Asking AI to patch area... (this can take up to 4 minutes, do not be concerned)');
+    consoleLog('Sending face-edit prompt to AI model', 'info');
 
     try {
       const result = await requestScadFromApi('/api/chat/face-edit', {
@@ -682,9 +682,9 @@ function initAIChat() {
         selection: selectedFaceContext,
         currentCode: getEditorContent(),
       });
-      applyGeneratedCode(result.scadCode, result.model || 'Gemini 3.1 Pro');
-      addToHistory(prompt, result.model || 'Gemini 3.1 Pro', result.scadCode);
-      updateAIStatus(`Face edit applied with ${result.model || 'Gemini 3.1 Pro'}.`);
+      applyGeneratedCode(result.scadCode, result.model || 'AI');
+      addToHistory(prompt, result.model || 'AI', result.scadCode);
+      updateAIStatus(`Face edit applied with ${result.model || 'AI'}.`);
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
@@ -730,7 +730,7 @@ function initAIChat() {
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
-      updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
+      updateFaceHint('Click a face in the model to open a targeted AI edit.');
     });
   }
 }
@@ -856,7 +856,7 @@ function initShortcuts() {
       hideFaceEditPopover();
       if (scene3d) scene3d.clearFaceSelection();
       selectedFaceContext = null;
-      updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
+      updateFaceHint('Click a face in the model to open a targeted AI edit.');
       return;
     }
 
@@ -909,8 +909,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initAIChat();
   initTemplates();
   initHistory();
-  updateAIStatus('Prompt Gemini 3.1 Pro to generate or revise full SCAD code.');
-  updateFaceHint('Click a face in the model to open a targeted Gemini edit.');
+  updateAIStatus('Prompt AI to generate or revise full SCAD code.');
+  updateFaceHint('Click a face in the model to open a targeted AI edit.');
 
   // Hide loading screen
   hideLoadingScreen();
