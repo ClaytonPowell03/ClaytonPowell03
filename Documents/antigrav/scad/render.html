@@ -48,9 +48,34 @@
         <button class="toolbar-btn toolbar-btn--ghost" id="btn-screenshot" title="Screenshot (PNG)">
           <span>📷</span> Screenshot
         </button>
-        <button class="toolbar-btn toolbar-btn--accent" id="btn-export" title="Export as STL">
-          <span>⭳</span> Export STL
-        </button>
+        <div class="export-dropdown" id="export-dropdown">
+          <button class="toolbar-btn toolbar-btn--accent" id="btn-export" title="Export model">
+            <span>⭳</span> Export <span class="export-dropdown__caret">▾</span>
+          </button>
+          <div class="export-dropdown__menu" id="export-menu">
+            <button class="export-dropdown__item" id="export-stl">
+              <span class="export-dropdown__item-icon">🔺</span>
+              <div class="export-dropdown__item-text">
+                <span class="export-dropdown__item-name">STL</span>
+                <span class="export-dropdown__item-desc">3D printing ready</span>
+              </div>
+            </button>
+            <button class="export-dropdown__item" id="export-obj">
+              <span class="export-dropdown__item-icon">🧊</span>
+              <div class="export-dropdown__item-text">
+                <span class="export-dropdown__item-name">OBJ</span>
+                <span class="export-dropdown__item-desc">Universal CAD format</span>
+              </div>
+            </button>
+            <button class="export-dropdown__item" id="export-scad">
+              <span class="export-dropdown__item-icon">📄</span>
+              <div class="export-dropdown__item-text">
+                <span class="export-dropdown__item-name">SCAD</span>
+                <span class="export-dropdown__item-desc">Download source code</span>
+              </div>
+            </button>
+          </div>
+        </div>
         <div class="toolbar__sep"></div>
         <button class="toolbar-btn toolbar-btn--primary" id="btn-render" title="Render model (Ctrl+Enter)">
           <span>▶</span> Render
@@ -60,8 +85,8 @@
         <button class="btn-icon" id="btn-templates" title="Templates">
           <span>📋</span>
         </button>
-        <button class="btn-icon" id="btn-history" title="Generations History">
-          <span>🕒</span>
+        <button class="btn-icon" id="btn-history" title="Projects / History">
+          <span>📁</span>
         </button>
         <button class="btn-icon" id="btn-wireframe" title="Toggle wireframe (W)">
           <span>◆</span>
@@ -78,6 +103,16 @@
         <button class="btn-icon mobile-code-toggle" id="btn-mobile-code" title="Toggle Code">
           <span>&lt;/&gt;</span>
         </button>
+        <div class="toolbar__sep"></div>
+        <!-- Auth: guest sees sign-in btn, signed-in sees avatar -->
+        <button class="toolbar-btn toolbar-btn--ghost" id="btn-auth" title="Sign in">
+          <span>👤</span> Sign in
+        </button>
+        <div class="toolbar__user" id="toolbar-user" style="display:none;">
+          <img class="toolbar__avatar" id="toolbar-avatar" src="" alt="" />
+          <span class="toolbar__user-name" id="toolbar-user-name"></span>
+          <button class="toolbar__signout" id="btn-signout" title="Sign out">✕</button>
+        </div>
       </div>
     </div>
 
@@ -206,7 +241,7 @@
           <h4>Editor</h4>
           <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>Render model</span></div>
           <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save file</span></div>
-          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>E</kbd><span>Export STL</span></div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>E</kbd><span>Export menu</span></div>
           <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd><span>Screenshot</span></div>
         </div>
         <div class="shortcut-group">
@@ -235,13 +270,41 @@
     <div class="templates-sidebar__list" id="templates-list"></div>
   </div>
 
-  <!-- ─── History Sidebar ────────────────────────── -->
+  <!-- ─── Projects / History Sidebar ──────────────── -->
   <div class="templates-sidebar" id="history-sidebar">
     <div class="templates-sidebar__header">
-      <h3>🕒 History</h3>
+      <h3 id="sidebar-title">📁 Projects</h3>
       <button class="templates-sidebar__close" id="history-close">✕</button>
     </div>
+    <div class="projects-sidebar__actions" id="projects-actions" style="display:none;">
+      <button class="ai-mini-panel__btn" id="btn-new-project">+ New Project</button>
+      <button class="ai-mini-panel__btn" id="btn-save-project">💾 Save Current</button>
+    </div>
     <div class="templates-sidebar__list" id="history-list"></div>
+  </div>
+
+  <!-- ─── Share Project Modal ────────────────────── -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal glass" style="max-width: 400px;">
+      <div class="modal__header">
+        <h3 class="modal__title">🔗 Share Project</h3>
+        <button class="modal__close" id="share-modal-close">✕</button>
+      </div>
+      <div class="modal__body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">Enter the email of the scAId user you'd like to share this project with.</p>
+        <input id="share-email-input" class="face-edit-quick__input" type="email" placeholder="user@example.com" style="margin-bottom: 12px;" />
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 16px;">
+          <label style="font-size:0.78rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="share-can-edit" /> Allow editing
+          </label>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="face-edit-popover__btn" id="share-cancel">Cancel</button>
+          <button class="face-edit-popover__btn face-edit-popover__btn--accent" id="share-confirm">Share</button>
+        </div>
+        <div class="share-modal__status" id="share-status" style="font-size:0.72rem; color:var(--text-muted); margin-top:12px;"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── Load Files Modal ───────────────────────── -->
@@ -254,6 +317,47 @@
       <div class="modal__body">
         <div id="saved-files-list" class="saved-files-list"></div>
         <div class="load-modal__empty" id="load-modal-empty">No saved files yet. Press Ctrl+S to save your work.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Auth Gate / Welcome Modal ────────────────── -->
+  <div class="modal-overlay" id="welcome-modal">
+    <div class="modal glass welcome-modal">
+      <div class="welcome-modal__glow"></div>
+      <div class="modal__header">
+        <h3 class="modal__title">👋 Welcome to scAId Editor</h3>
+        <button class="modal__close" id="welcome-modal-close">✕</button>
+      </div>
+      <div class="modal__body welcome-modal__body">
+        <div class="welcome-modal__preview-badge">
+          <span class="welcome-modal__badge-icon">🔍</span>
+          <span>This is a <strong>preview object</strong> — a sample model to explore the editor.</span>
+        </div>
+        <p style="font-size:0.86rem; color:var(--text-secondary); text-align:center;">How would you like to get started?</p>
+        <div class="auth-gate__choices">
+          <button class="auth-gate__card" id="auth-guest">
+            <span class="auth-gate__card-icon">🧪</span>
+            <span class="auth-gate__card-title">Just trying things out</span>
+            <span class="auth-gate__card-desc">Use the editor without an account. Projects stay in your browser.</span>
+          </button>
+          <button class="auth-gate__card auth-gate__card--accent" id="auth-signin">
+            <span class="auth-gate__card-icon">👤</span>
+            <span class="auth-gate__card-title">Sign in with an account</span>
+            <span class="auth-gate__card-desc">Save projects to the cloud, share with others.</span>
+          </button>
+        </div>
+        <!-- Email/Password sign-in view (hidden by default) -->
+        <div class="auth-gate__signin" id="auth-signin-view" style="display:none;">
+          <input id="auth-email" class="auth-gate__input" type="email" placeholder="Email address" autocomplete="email" />
+          <input id="auth-password" class="auth-gate__input" type="password" placeholder="Password" autocomplete="current-password" />
+          <div class="auth-gate__btn-row">
+            <button class="auth-gate__submit" id="btn-email-signin">Sign in</button>
+            <button class="auth-gate__submit auth-gate__submit--secondary" id="btn-email-signup">Create account</button>
+          </div>
+          <div class="auth-gate__status" id="auth-status"></div>
+          <button class="auth-gate__back" id="auth-back">← Back to choices</button>
+        </div>
       </div>
     </div>
   </div>

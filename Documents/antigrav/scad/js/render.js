@@ -12,6 +12,7 @@ import { syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter 
 
 import * as THREE from 'three';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { OBJExporter } from 'three/addons/exporters/OBJExporter.js';
 import { createScene, createAxesHUD } from './three-scene.js';
 import { DEFAULT_FILENAME, DEFAULT_SAMPLE_CODE } from './default-sample.js';
 import { parseSCAD } from './scad-parser.js';
@@ -19,6 +20,12 @@ import { getSimpleFaceEditSpec, applySimpleFaceEdit } from './simple-face-edit.j
 import { TEMPLATES } from './templates.js';
 import { inject } from '@vercel/analytics';
 import { injectSpeedInsights } from '@vercel/speed-insights';
+import {
+  isSupabaseConfigured, signUpWithEmail, signInWithEmail, signOut, getUser, getSession, onAuthChange,
+  createProject, updateProject, deleteProject as deleteCloudProject,
+  getMyProjects, getSharedProjects, shareProjectByEmail,
+} from './supabase.js';
+
 
 inject();
 injectSpeedInsights();
@@ -26,12 +33,14 @@ injectSpeedInsights();
 // ── Sample SCAD Code ────────────────────────────────
 const SAMPLE_CODE = DEFAULT_SAMPLE_CODE;
 
-// ── State ───────────────────────────────────────────
+// ── State ─────────────────────────────────────────────
 let editor;
 let scene3d;
 let axesHUD;
 let selectedFaceContext = null;
 let selectedQuickEditSpec = null;
+let currentUser = null;
+let currentProjectId = null;  // cloud project id when signed in
 
 // ── Console System ──────────────────────────────────
 const consoleLogs = [];
@@ -536,6 +545,71 @@ function exportSTL() {
   }
 }
 
+// ── OBJ Export ───────────────────────────────────────
+function exportOBJ() {
+  if (!scene3d || !scene3d.modelGroup || scene3d.modelGroup.children.length === 0) {
+    showToast('✗ Nothing to export');
+    return;
+  }
+  try {
+    showToast('Exporting OBJ...');
+    const exporter = new OBJExporter();
+    const exportGroup = new THREE.Group();
+    scene3d.modelGroup.traverse((child) => {
+      if (child.isMesh && !child.userData.isWireframe) {
+        exportGroup.add(child.clone());
+      }
+    });
+
+    const objString = exporter.parse(exportGroup);
+    const blob = new Blob([objString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    const baseName = (document.getElementById('filename').textContent || 'model.scad').replace(/\.scad$/i, '');
+    a.download = `${baseName}.obj`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ OBJ exported');
+    consoleLog('OBJ exported successfully', 'success');
+  } catch (err) {
+    console.error('OBJ Export Error:', err);
+    showToast('✗ OBJ export error');
+    consoleLog(`OBJ export error: ${err.message}`, 'error');
+  }
+}
+
+// ── SCAD Download ────────────────────────────────────
+function exportSCAD() {
+  const code = getEditorContent();
+  if (!code.trim()) {
+    showToast('✗ No code to download');
+    return;
+  }
+  try {
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    const filename = (document.getElementById('filename').textContent || 'model.scad').trim();
+    a.download = filename.endsWith('.scad') ? filename : `${filename}.scad`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ SCAD file downloaded');
+    consoleLog('SCAD source file downloaded', 'success');
+  } catch (err) {
+    console.error('SCAD Download Error:', err);
+    showToast('✗ Download error');
+    consoleLog(`SCAD download error: ${err.message}`, 'error');
+  }
+}
+
 // ── Modals ───────────────────────────────────────────
 function openModal(id) {
   document.getElementById(id).classList.add('visible');
@@ -570,32 +644,31 @@ function initTemplates() {
   });
 }
 
-// ── Generation History ───────────────────────────────
+// ── Generation History (guest mode / localStorage) ───────
 function addToHistory(prompt, model, code) {
-  const history = JSON.parse(localStorage.getItem('scad_history') || '[]');
-  history.unshift({
+  // If signed in, auto-save to cloud instead
+  if (currentUser && currentProjectId) {
+    updateProject(currentProjectId, { code, name: document.getElementById('filename').textContent.trim() }).catch(() => {});
+  }
+
+  const hist = JSON.parse(localStorage.getItem('scad_history') || '[]');
+  hist.unshift({
     id: Date.now().toString() + Math.floor(Math.random() * 1000).toString(),
-    prompt: prompt,
-    model: model,
-    code: code,
+    prompt, model, code,
     date: new Date().toISOString()
   });
-  if (history.length > 50) history.length = 50;
-  localStorage.setItem('scad_history', JSON.stringify(history));
-  renderHistoryList();
+  if (hist.length > 50) hist.length = 50;
+  localStorage.setItem('scad_history', JSON.stringify(hist));
+  renderSidebarList();
 }
 
-function renderHistoryList() {
-  const list = document.getElementById('history-list');
-  if (!list) return;
-  const history = JSON.parse(localStorage.getItem('scad_history') || '[]');
-  
-  if (history.length === 0) {
+function renderLocalHistoryList(list) {
+  const hist = JSON.parse(localStorage.getItem('scad_history') || '[]');
+  if (hist.length === 0) {
     list.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5;">No generations yet.<br/>Use the AI Chat to generate code.</div>';
     return;
   }
-
-  list.innerHTML = history.map(item => {
+  list.innerHTML = hist.map(item => {
     const d = new Date(item.date);
     const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const shortPrompt = item.prompt.length > 40 ? item.prompt.substring(0, 40) + '...' : item.prompt;
@@ -605,11 +678,10 @@ function renderHistoryList() {
       <div class="template-card__desc">${escapeHtml(item.model)} • ${dateStr}</div>
     </div>`;
   }).join('');
-
   list.querySelectorAll('.history-card').forEach(card => {
     card.addEventListener('click', () => {
-      const hist = JSON.parse(localStorage.getItem('scad_history') || '[]');
-      const item = hist.find(h => h.id === card.dataset.id);
+      const h = JSON.parse(localStorage.getItem('scad_history') || '[]');
+      const item = h.find(i => i.id === card.dataset.id);
       if (item) {
         setEditorContent(item.code);
         document.getElementById('history-sidebar').classList.remove('visible');
@@ -621,8 +693,111 @@ function renderHistoryList() {
   });
 }
 
+// ── Cloud Projects (signed-in mode) ─────────────────
+async function renderCloudProjectsList(list) {
+  try {
+    const [myProjects, sharedProjects] = await Promise.all([getMyProjects(), getSharedProjects()]);
+    let html = '';
+
+    if (myProjects.length === 0 && sharedProjects.length === 0) {
+      html = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.8rem; line-height: 1.5;">No projects yet.<br/>Click "+ New Project" to start.</div>';
+      list.innerHTML = html;
+      return;
+    }
+
+    if (myProjects.length > 0) {
+      html += '<div style="padding: 6px 12px 4px; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); font-weight:700;">My Projects</div>';
+      html += myProjects.map(p => {
+        const d = new Date(p.updated_at);
+        const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const isActive = p.id === currentProjectId;
+        return `<div class="template-card history-card ${isActive ? 'active-project' : ''}" data-project-id="${p.id}">
+          <div class="template-card__icon">📄</div>
+          <div class="template-card__name">${escapeHtml(p.name)}</div>
+          <div class="template-card__desc">Updated ${dateStr}</div>
+          <div class="project-card__actions">
+            <button class="project-card__share" data-share-id="${p.id}" title="Share">🔗 Share</button>
+            <button class="project-card__delete" data-del-id="${p.id}" title="Delete">🗑 Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    if (sharedProjects.length > 0) {
+      html += '<div style="padding: 12px 12px 4px; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); font-weight:700;">Shared with me</div>';
+      html += sharedProjects.map(p => {
+        const d = new Date(p.updated_at);
+        const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `<div class="template-card history-card" data-project-id="${p.id}">
+          <div class="template-card__icon">📄</div>
+          <div class="template-card__name">${escapeHtml(p.name)} <span class="project-card__shared-badge">👥 Shared</span></div>
+          <div class="template-card__desc">Updated ${dateStr}</div>
+        </div>`;
+      }).join('');
+    }
+
+    list.innerHTML = html;
+
+    // Bind click-to-load on project cards
+    list.querySelectorAll('[data-project-id]').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.project-card__share') || e.target.closest('.project-card__delete')) return;
+        const pid = card.dataset.projectId;
+        const allProjects = [...myProjects, ...sharedProjects];
+        const proj = allProjects.find(p => p.id === pid);
+        if (proj) {
+          setEditorContent(proj.code || '');
+          document.getElementById('filename').textContent = proj.name;
+          currentProjectId = proj.id;
+          document.getElementById('history-sidebar').classList.remove('visible');
+          showToast(`✓ Opened "${proj.name}"`);
+          consoleLog(`Opened project: ${proj.name}`, 'info');
+          setTimeout(() => renderModel(), 100);
+        }
+      });
+    });
+
+    // Bind share buttons
+    list.querySelectorAll('.project-card__share').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openShareModal(btn.dataset.shareId);
+      });
+    });
+
+    // Bind delete buttons
+    list.querySelectorAll('.project-card__delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const pid = btn.dataset.delId;
+        if (!confirm('Delete this project permanently?')) return;
+        try {
+          await deleteCloudProject(pid);
+          if (currentProjectId === pid) currentProjectId = null;
+          showToast('✓ Project deleted');
+          renderSidebarList();
+        } catch (err) {
+          showToast(`✗ ${err.message}`);
+        }
+      });
+    });
+  } catch (err) {
+    list.innerHTML = `<div style="padding: 24px; text-align: center; color: #f87171; font-size: 0.8rem;">✗ ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderSidebarList() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  if (currentUser) {
+    renderCloudProjectsList(list);
+  } else {
+    renderLocalHistoryList(list);
+  }
+}
+
 function initHistory() {
-  renderHistoryList();
+  renderSidebarList();
 }
 
 // ── Tab Switching ────────────────────────────────────
@@ -834,7 +1009,39 @@ function initAIChat() {
 // ── Toolbar Buttons ─────────────────────────────────
 function initToolbar() {
   document.getElementById('btn-render').addEventListener('click', renderModel);
-  document.getElementById('btn-export').addEventListener('click', exportSTL);
+
+  // Export dropdown toggle
+  const exportDropdown = document.getElementById('export-dropdown');
+  const exportBtn = document.getElementById('btn-export');
+  const exportMenu = document.getElementById('export-menu');
+
+  exportBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportDropdown.classList.toggle('open');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!exportDropdown.contains(e.target)) {
+      exportDropdown.classList.remove('open');
+    }
+  });
+
+  document.getElementById('export-stl').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    exportSTL();
+  });
+
+  document.getElementById('export-obj').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    exportOBJ();
+  });
+
+  document.getElementById('export-scad').addEventListener('click', () => {
+    exportDropdown.classList.remove('open');
+    exportSCAD();
+  });
+
   document.getElementById('btn-screenshot').addEventListener('click', exportScreenshot);
   document.getElementById('btn-save').addEventListener('click', saveFile);
 
@@ -930,10 +1137,11 @@ function initShortcuts() {
       return;
     }
 
-    // Ctrl+E — export STL
+    // Ctrl+E — toggle export dropdown
     if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
       e.preventDefault();
-      exportSTL();
+      const exportDropdown = document.getElementById('export-dropdown');
+      if (exportDropdown) exportDropdown.classList.toggle('open');
       return;
     }
 
@@ -992,6 +1200,279 @@ function hideLoadingScreen() {
   }
 }
 
+// ── Auth Gate (replaces old welcome popup) ──────────
+let shareTargetProjectId = null;
+
+function openShareModal(projectId) {
+  shareTargetProjectId = projectId;
+  const emailInput = document.getElementById('share-email-input');
+  const canEditCheck = document.getElementById('share-can-edit');
+  const statusEl = document.getElementById('share-status');
+  if (emailInput) emailInput.value = '';
+  if (canEditCheck) canEditCheck.checked = false;
+  if (statusEl) statusEl.textContent = '';
+  openModal('share-modal');
+}
+
+function initShareModal() {
+  const closeBtn = document.getElementById('share-modal-close');
+  const cancelBtn = document.getElementById('share-cancel');
+  const confirmBtn = document.getElementById('share-confirm');
+
+  function close() { closeModal('share-modal'); shareTargetProjectId = null; }
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (cancelBtn) cancelBtn.addEventListener('click', close);
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const email = document.getElementById('share-email-input')?.value.trim();
+      const canEdit = document.getElementById('share-can-edit')?.checked || false;
+      const statusEl = document.getElementById('share-status');
+      if (!email) { if (statusEl) statusEl.textContent = 'Please enter an email address.'; return; }
+      if (!shareTargetProjectId) return;
+
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Sharing...';
+      try {
+        await shareProjectByEmail(shareTargetProjectId, email, canEdit);
+        if (statusEl) statusEl.textContent = `✓ Shared with ${email}`;
+        showToast(`✓ Project shared with ${email}`);
+        setTimeout(close, 1500);
+      } catch (err) {
+        if (statusEl) statusEl.textContent = `✗ ${err.message}`;
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Share';
+      }
+    });
+  }
+}
+
+function updateToolbarAuth(user) {
+  const authBtn = document.getElementById('btn-auth');
+  const userEl = document.getElementById('toolbar-user');
+  const avatarEl = document.getElementById('toolbar-avatar');
+  const nameEl = document.getElementById('toolbar-user-name');
+  const sidebarTitle = document.getElementById('sidebar-title');
+  const projectsActions = document.getElementById('projects-actions');
+
+  if (user) {
+    if (authBtn) authBtn.style.display = 'none';
+    if (userEl) userEl.style.display = 'flex';
+    if (avatarEl) avatarEl.src = user.user_metadata?.avatar_url || '';
+    if (nameEl) nameEl.textContent = user.user_metadata?.full_name || user.email || 'User';
+    if (sidebarTitle) sidebarTitle.textContent = '📁 Projects';
+    if (projectsActions) projectsActions.style.display = 'flex';
+  } else {
+    if (authBtn) authBtn.style.display = '';
+    if (userEl) userEl.style.display = 'none';
+    if (sidebarTitle) sidebarTitle.textContent = '🕒 History';
+    if (projectsActions) projectsActions.style.display = 'none';
+  }
+}
+
+function initAuthGate() {
+  const GATE_KEY = 'scaid_auth_choice';
+
+  // Wire up toolbar auth button
+  const authBtn = document.getElementById('btn-auth');
+  if (authBtn) {
+    authBtn.addEventListener('click', () => {
+      showSignInChoices();
+      openModal('welcome-modal');
+    });
+  }
+
+  // Wire up toolbar sign-out
+  const signoutBtn = document.getElementById('btn-signout');
+  if (signoutBtn) {
+    signoutBtn.addEventListener('click', async () => {
+      try {
+        await signOut();
+        currentUser = null;
+        currentProjectId = null;
+        sessionStorage.removeItem(GATE_KEY);
+        localStorage.removeItem(GATE_KEY);
+        updateToolbarAuth(null);
+        renderSidebarList();
+        showToast('Signed out');
+      } catch (err) {
+        showToast(`✗ ${err.message}`);
+      }
+    });
+  }
+
+  // Wire up new project button
+  const newProjectBtn = document.getElementById('btn-new-project');
+  if (newProjectBtn) {
+    newProjectBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      try {
+        const proj = await createProject('Untitled.scad', '');
+        currentProjectId = proj.id;
+        setEditorContent('');
+        document.getElementById('filename').textContent = 'Untitled.scad';
+        showToast('✓ New project created');
+        renderSidebarList();
+      } catch (err) {
+        showToast(`✗ ${err.message}`);
+      }
+    });
+  }
+
+  // Wire up save project button
+  const saveProjectBtn = document.getElementById('btn-save-project');
+  if (saveProjectBtn) {
+    saveProjectBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const code = getEditorContent();
+      const name = document.getElementById('filename').textContent.trim() || 'Untitled.scad';
+      try {
+        if (currentProjectId) {
+          await updateProject(currentProjectId, { code, name });
+          showToast(`✓ Saved "${name}"`);
+        } else {
+          const proj = await createProject(name, code);
+          currentProjectId = proj.id;
+          showToast(`✓ Saved "${name}" to cloud`);
+        }
+        renderSidebarList();
+      } catch (err) {
+        showToast(`✗ ${err.message}`);
+      }
+    });
+  }
+
+  // Listen for auth state changes (handles OAuth redirect)
+  onAuthChange(async (session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      localStorage.setItem(GATE_KEY, 'account');
+      updateToolbarAuth(currentUser);
+      renderSidebarList();
+      closeModal('welcome-modal');
+      highlightAIPanel();
+    }
+  });
+
+  // Check if already authenticated or has made a choice
+  (async () => {
+    const session = await getSession();
+    if (session?.user) {
+      currentUser = session.user;
+      updateToolbarAuth(currentUser);
+      renderSidebarList();
+      return; // already signed in, skip gate
+    }
+
+    const choice = localStorage.getItem(GATE_KEY) || sessionStorage.getItem(GATE_KEY);
+    if (choice === 'guest' || choice === 'account') return; // already chose
+
+    // Show auth gate modal after brief delay
+    setTimeout(() => openModal('welcome-modal'), 800);
+  })();
+
+  // Wire up auth gate buttons
+  const guestBtn = document.getElementById('auth-guest');
+  const signinBtn = document.getElementById('auth-signin');
+  const backBtn = document.getElementById('auth-back');
+  const closeBtn = document.getElementById('welcome-modal-close');
+  const choices = document.querySelector('.auth-gate__choices');
+  const signinView = document.getElementById('auth-signin-view');
+  
+  const emailInput = document.getElementById('auth-email');
+  const passwordInput = document.getElementById('auth-password');
+  const btnEmailSignIn = document.getElementById('btn-email-signin');
+  const btnEmailSignUp = document.getElementById('btn-email-signup');
+  const authStatus = document.getElementById('auth-status');
+
+  function showSignInChoices() {
+    if (choices) choices.style.display = 'flex';
+    if (signinView) signinView.style.display = 'none';
+    if (authStatus) {
+      authStatus.textContent = '';
+      authStatus.className = 'auth-gate__status';
+    }
+    if (emailInput) emailInput.value = '';
+    if (passwordInput) passwordInput.value = '';
+  }
+
+  function dismissAsGuest() {
+    sessionStorage.setItem(GATE_KEY, 'guest');
+    closeModal('welcome-modal');
+    highlightAIPanel();
+  }
+
+  if (guestBtn) guestBtn.addEventListener('click', dismissAsGuest);
+  if (closeBtn) closeBtn.addEventListener('click', dismissAsGuest);
+
+  if (signinBtn) {
+    signinBtn.addEventListener('click', () => {
+      if (choices) choices.style.display = 'none';
+      if (signinView) signinView.style.display = 'flex';
+    });
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener('click', showSignInChoices);
+  }
+
+  async function handleAuth(action, btn) {
+    const email = emailInput?.value.trim();
+    const password = passwordInput?.value.trim();
+    if (!email || !password) {
+      authStatus.textContent = 'Please enter email and password';
+      authStatus.className = 'auth-gate__status error';
+      return;
+    }
+    
+    authStatus.textContent = 'Authenticating...';
+    authStatus.className = 'auth-gate__status';
+    btn.disabled = true;
+
+    try {
+      if (action === 'signin') {
+        await signInWithEmail(email, password);
+      } else {
+        await signUpWithEmail(email, password);
+      }
+      
+      authStatus.textContent = 'Success!';
+      authStatus.className = 'auth-gate__status success';
+      
+      // onAuthChange listener will handle the modal close and state update
+    } catch (err) {
+      authStatus.textContent = err.message;
+      authStatus.className = 'auth-gate__status error';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  if (btnEmailSignIn) {
+    btnEmailSignIn.addEventListener('click', () => handleAuth('signin', btnEmailSignIn));
+  }
+  if (btnEmailSignUp) {
+    btnEmailSignUp.addEventListener('click', () => handleAuth('signup', btnEmailSignUp));
+  }
+
+  // Overlay click dismisses as guest
+  const overlay = document.getElementById('welcome-modal');
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) dismissAsGuest();
+    });
+  }
+}
+
+function highlightAIPanel() {
+  const aiPanel = document.getElementById('ai-mini-panel');
+  if (aiPanel) {
+    aiPanel.classList.add('highlight-pulse');
+    setTimeout(() => aiPanel.classList.remove('highlight-pulse'), 3000);
+  }
+}
+
 // ── Init ────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   consoleLog('SCAD Studio v3.0 initialized', 'info');
@@ -1016,4 +1497,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-render sample on load
   setTimeout(() => renderModel(), 400);
+
+  // Init auth system (replaces old welcome popup)
+  initAuthGate();
+  initShareModal();
 });
