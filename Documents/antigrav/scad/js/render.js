@@ -1602,17 +1602,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Gallery Publish ─────────────────────────────────
 function initGalleryPublish() {
+  const publishDropdown = document.getElementById('publish-dropdown');
   const publishBtn = document.getElementById('btn-publish');
-  const publishModal = document.getElementById('publish-modal');
-  const publishCancel = document.getElementById('btn-publish-cancel');
+  const publishMenu = document.getElementById('publish-menu');
   const publishSubmit = document.getElementById('btn-publish-submit');
   const titleInput = document.getElementById('publish-title');
   const descInput = document.getElementById('publish-desc');
 
-  if (!publishBtn || !publishModal) return;
+  if (!publishBtn || !publishMenu) return;
 
-  publishBtn.addEventListener('click', async () => {
-    // 1. Check auth
+  publishBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    
+    // Toggle dropdown
+    const isOpen = publishDropdown.classList.contains('open');
+    if (isOpen) {
+      publishDropdown.classList.remove('open');
+      return;
+    }
+
+    // 1. Check auth before opening
     if (!isSupabaseConfigured()) {
       showToast('Database not configured. Run Supabase scripts first.');
       return;
@@ -1625,21 +1634,30 @@ function initGalleryPublish() {
       }
       return;
     }
+
     // 2. Automatically infer best default title
     let inferredTitle = document.getElementById('filename').textContent || 'Untitled Design';
     inferredTitle = inferredTitle.replace(/\.scad$/i, '').replace(/_/g, ' ');
-    // capitalize words
     inferredTitle = inferredTitle.replace(/\b\w/g, c => c.toUpperCase());
     
     titleInput.value = inferredTitle;
     descInput.value = '';
     
-    // 3. Show modal
-    publishModal.style.display = 'flex';
+    // 3. Keep other dropdowns closed, open this one
+    document.querySelectorAll('.export-dropdown.open').forEach(el => el.classList.remove('open'));
+    publishDropdown.classList.add('open');
   });
 
-  publishCancel.addEventListener('click', () => {
-    publishModal.style.display = 'none';
+  // Stop clicks inside the menu from closing the dropdown
+  publishMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // Close when clicking outside (handled alongside export logic)
+  document.addEventListener('click', (e) => {
+    if (!publishDropdown.contains(e.target)) {
+      publishDropdown.classList.remove('open');
+    }
   });
 
   publishSubmit.addEventListener('click', async () => {
@@ -1656,12 +1674,10 @@ function initGalleryPublish() {
 
       const code = getEditorContent();
       
-      // Attempt to capture simple thumbnail from canvas
       let thumbnailUrl = null;
       if (scene3d && typeof scene3d.captureScreenshot === 'function') {
         const dataUrl = scene3d.captureScreenshot();
         if (dataUrl) {
-          // convert dataURL to File
           const res = await fetch(dataUrl);
           const blob = await res.blob();
           const file = new File([blob], "thumbnail.png", { type: "image/png" });
@@ -1675,14 +1691,14 @@ function initGalleryPublish() {
       await publishToGallery(title, desc, code, thumbnailUrl);
 
       showToast('✓ Published to Gallery!');
-      publishModal.style.display = 'none';
+      publishDropdown.classList.remove('open');
       
     } catch (err) {
       console.error(err);
       showToast('✗ Publish failed: ' + err.message);
     } finally {
       publishSubmit.disabled = false;
-      publishSubmit.textContent = 'Publish Design';
+      publishSubmit.textContent = 'Submit';
     }
   });
 }
