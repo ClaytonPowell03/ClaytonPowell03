@@ -240,3 +240,65 @@ export async function removeShare(shareId) {
 
   if (error) throw error;
 }
+
+// ── Gallery ──────────────────────────────────────────
+
+export async function uploadGalleryThumbnail(file) {
+  if (!supabase) throw new Error('Not authenticated');
+  const user = await getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Unique file name: user_id/timestamp.ext
+  const fileExt = file.name ? file.name.split('.').pop() : 'png';
+  const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+  
+  const { error: uploadError } = await supabase.storage
+    .from('gallery_thumbnails')
+    .upload(fileName, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('gallery_thumbnails')
+    .getPublicUrl(fileName);
+
+  return data.publicUrl;
+}
+
+export async function publishToGallery(title, description, scadCode, thumbnailUrl = null) {
+  if (!supabase) throw new Error('Not authenticated');
+  const user = await getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('gallery')
+    .insert({
+      owner_id: user.id,
+      title,
+      description,
+      scad_code: scadCode,
+      thumbnail_url: thumbnailUrl
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getGalleryLatest(limit = 20) {
+  if (!supabase) return [];
+  // Note: owner_id can be joined if we added an auth wrapper view, 
+  // but for now we just fetch the gallery items.
+  const { data, error } = await supabase
+    .from('gallery')
+    .select(`
+      *,
+      owner_id
+    `)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}

@@ -44,6 +44,9 @@
         <button class="toolbar-btn toolbar-btn--ghost" id="btn-load" title="Load file">
           <span>📂</span> Load
         </button>
+        <button class="toolbar-btn toolbar-btn--ghost" id="btn-publish" title="Publish to Gallery">
+          <span>🌍</span> Publish
+        </button>
         <div class="toolbar__sep"></div>
         <button class="toolbar-btn toolbar-btn--ghost" id="btn-screenshot" title="Screenshot (PNG)">
           <span>📷</span> Screenshot
@@ -387,6 +390,29 @@
           <div class="auth-gate__status" id="auth-status"></div>
           <button class="auth-gate__back" id="auth-back">← Back to choices</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Publish Modal -->
+  <div class="modal" id="publish-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:200; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div class="modal-content" style="background:var(--bg-secondary); border:1px solid var(--border-accent); border-radius:12px; width:400px; padding:24px; box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+      <h3 style="margin:0 0 16px; font-family:var(--font-display); color:var(--text-primary);">Publish to Gallery</h3>
+      <p style="margin:0 0 20px; font-size:0.85rem; color:var(--text-secondary);">Share your design with the community.</p>
+      
+      <div style="margin-bottom:16px;">
+        <label for="publish-title" style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--text-primary);">Title</label>
+        <input type="text" id="publish-title" style="width:100%; padding:10px; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:6px; color:var(--text-primary); font-family:var(--font-body);" placeholder="My Awesome Design">
+      </div>
+      
+      <div style="margin-bottom:24px;">
+        <label for="publish-desc" style="display:block; margin-bottom:6px; font-size:0.8rem; color:var(--text-primary);">Description</label>
+        <textarea id="publish-desc" style="width:100%; padding:10px; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:6px; color:var(--text-primary); font-family:var(--font-body); resize:vertical; min-height:80px;" placeholder="Brief description of what this is..."></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button id="btn-publish-cancel" style="padding:8px 16px; background:transparent; border:1px solid var(--border-subtle); color:var(--text-secondary); border-radius:6px; cursor:pointer;">Cancel</button>
+        <button id="btn-publish-submit" style="padding:8px 16px; background:var(--accent-cyan); color:#000; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Publish Design</button>
       </div>
     </div>
   </div>

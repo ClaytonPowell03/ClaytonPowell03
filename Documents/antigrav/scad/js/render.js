@@ -23,7 +23,8 @@ import { injectSpeedInsights } from '@vercel/speed-insights';
 import {
   isSupabaseConfigured, signUpWithEmail, signInWithEmail, signOut, getUser, getSession, onAuthChange,
   createProject, updateProject, deleteProject as deleteCloudProject,
-  getMyProjects, getSharedProjects, shareProjectByEmail, uploadAvatar
+  getMyProjects, getSharedProjects, shareProjectByEmail, uploadAvatar,
+  publishToGallery, uploadGalleryThumbnail
 } from './supabase.js';
 
 
@@ -1098,6 +1099,9 @@ function initToolbar() {
 
   document.getElementById('btn-screenshot').addEventListener('click', exportScreenshot);
   document.getElementById('btn-save').addEventListener('click', saveFile);
+  
+  // Hook up Gallery Publish button logic
+  initGalleryPublish();
 
   document.getElementById('btn-load').addEventListener('click', () => {
     showSavedFiles();
@@ -1595,3 +1599,90 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuthGate();
   initShareModal();
 });
+
+// ── Gallery Publish ─────────────────────────────────
+function initGalleryPublish() {
+  const publishBtn = document.getElementById('btn-publish');
+  const publishModal = document.getElementById('publish-modal');
+  const publishCancel = document.getElementById('btn-publish-cancel');
+  const publishSubmit = document.getElementById('btn-publish-submit');
+  const titleInput = document.getElementById('publish-title');
+  const descInput = document.getElementById('publish-desc');
+
+  if (!publishBtn || !publishModal) return;
+
+  publishBtn.addEventListener('click', async () => {
+    // 1. Check auth
+    if (!isSupabaseConfigured()) {
+      showToast('Database not configured. Run Supabase scripts first.');
+      return;
+    }
+    const user = await getUser();
+    if (!user) {
+      showToast('Please sign in to publish to the gallery.');
+      if (typeof initAuthGate === 'function') {
+        document.getElementById('auth-modal-overlay').classList.add('visible');
+      }
+      return;
+    }
+    // 2. Automatically infer best default title
+    let inferredTitle = document.getElementById('filename').textContent || 'Untitled Design';
+    inferredTitle = inferredTitle.replace(/\.scad$/i, '').replace(/_/g, ' ');
+    // capitalize words
+    inferredTitle = inferredTitle.replace(/\b\w/g, c => c.toUpperCase());
+    
+    titleInput.value = inferredTitle;
+    descInput.value = '';
+    
+    // 3. Show modal
+    publishModal.style.display = 'flex';
+  });
+
+  publishCancel.addEventListener('click', () => {
+    publishModal.style.display = 'none';
+  });
+
+  publishSubmit.addEventListener('click', async () => {
+    const title = titleInput.value.trim();
+    const desc = descInput.value.trim();
+    if (!title) {
+      showToast('Title is required.');
+      return;
+    }
+
+    try {
+      publishSubmit.disabled = true;
+      publishSubmit.textContent = 'Publishing...';
+
+      const code = getEditorContent();
+      
+      // Attempt to capture simple thumbnail from canvas
+      let thumbnailUrl = null;
+      if (scene3d && typeof scene3d.captureScreenshot === 'function') {
+        const dataUrl = scene3d.captureScreenshot();
+        if (dataUrl) {
+          // convert dataURL to File
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const file = new File([blob], "thumbnail.png", { type: "image/png" });
+          
+          showToast('Uploading thumbnail...');
+          thumbnailUrl = await uploadGalleryThumbnail(file);
+        }
+      }
+
+      showToast('Publishing design...');
+      await publishToGallery(title, desc, code, thumbnailUrl);
+
+      showToast('✓ Published to Gallery!');
+      publishModal.style.display = 'none';
+      
+    } catch (err) {
+      console.error(err);
+      showToast('✗ Publish failed: ' + err.message);
+    } finally {
+      publishSubmit.disabled = false;
+      publishSubmit.textContent = 'Publish Design';
+    }
+  });
+}
