@@ -3,6 +3,7 @@ import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createGeminiApiMiddleware } from './server/gemini-api.js';
+import { shutdownPostHog } from './server/posthog.js';
 
 // Load local .env into process.env if present
 dotenv.config();
@@ -27,4 +28,14 @@ app.use((req, res, next) => {
 
 app.listen(port, () => {
   console.log(`SCAD Studio production server running on http://localhost:${port}`);
+});
+
+process.on('SIGTERM', async () => {
+  await shutdownPostHog();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  await shutdownPostHog();
+  process.exit(0);
 });

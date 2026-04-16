@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════════════════ */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { getPostHogClient } from './posthog.js';
 
 const MAX_REQUEST_BYTES = 1_000_000;
 const GUEST_RATE_LIMIT_COOKIE = 'scaid_guest_ai_rl';
@@ -673,9 +674,20 @@ export function createGeminiApiMiddleware(env) {
 
     try {
       const authenticatedUser = await getAuthenticatedUser(req, env);
+      const distinctId = authenticatedUser?.id || 'guest';
+      const posthog = getPostHogClient();
+
       if (!authenticatedUser) {
         const rateLimit = enforceGuestRateLimit(req, res, env);
         if (!rateLimit.allowed) {
+          posthog?.capture({
+            distinctId,
+            event: 'ai_request_rate_limited',
+            properties: {
+              endpoint: pathname,
+              retry_after_seconds: rateLimit.retryAfterSeconds,
+            },
+          });
           return sendJson(res, 429, {
             error: rateLimit.message,
             retryAfterSeconds: rateLimit.retryAfterSeconds,
@@ -683,10 +695,37 @@ export function createGeminiApiMiddleware(env) {
         }
       }
 
-      if (pathname === '/api/chat/generate') {
-        await handleGenerate(req, res, env);
-      } else {
-        await handleFaceEdit(req, res, env);
+      const eventName = pathname === '/api/chat/generate' ? 'ai_generate' : 'ai_face_edit';
+      const startTime = Date.now();
+
+      try {
+        if (pathname === '/api/chat/generate') {
+          await handleGenerate(req, res, env);
+        } else {
+          await handleFaceEdit(req, res, env);
+        }
+        posthog?.capture({
+          distinctId,
+          event: eventName,
+          properties: {
+            outcome: 'success',
+            is_authenticated: Boolean(authenticatedUser),
+            duration_ms: Date.now() - startTime,
+          },
+        });
+      } catch (err) {
+        posthog?.capture({
+          distinctId,
+          event: eventName,
+          properties: {
+            outcome: 'error',
+            is_authenticated: Boolean(authenticatedUser),
+            duration_ms: Date.now() - startTime,
+            error_message: err?.message,
+            status_code: err?.statusCode || 500,
+          },
+        });
+        throw err;
       }
     } catch (err) {
       const statusCode = err?.statusCode || 500;
