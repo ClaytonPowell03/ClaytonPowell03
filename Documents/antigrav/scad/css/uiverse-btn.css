@@ -1,0 +1,99 @@
+/* ── Uiverse Tailwind Button Translation ──────────────────── */
+/* From Uiverse.io by Javierrocadev */
+
+.uiverse-glow-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background-color: #262626; /* neutral-800 */
+  height: 4rem; /* h-16 */
+  width: 16rem; /* w-64 */
+  border: 1px solid #404040; /* border */
+  color: #f9fafb; /* text-gray-50 */
+  font-size: 1rem; /* text-base */
+  font-weight: 700; /* font-bold */
+  border-radius: 0.5rem; /* rounded-lg */
+  overflow: hidden;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transform-origin: left;
+  transition: all 500ms ease; /* duration-500 */
+  cursor: pointer;
+  text-decoration-thickness: 1px;
+}
+
+.uiverse-glow-btn:hover {
+  border-color: #fda4af; /* hover:border-rose-300 */
+  text-decoration-thickness: 2px; /* hover:decoration-2 */
+  text-underline-offset: 4px; /* hover:underline-offset-4 */
+  color: #fda4af; /* hover:text-rose-300 */
+}
+
+/* Before Blob (Violet) */
+.uiverse-glow-btn::before {
+  content: '';
+  position: absolute;
+  width: 3rem; /* w-12 */
+  height: 3rem; /* h-12 */
+  right: 0.25rem; /* right-1 */
+  top: 0.25rem; /* top-1 */
+  z-index: 10;
+  background-color: #8b5cf6; /* bg-violet-500 */
+  border-radius: 9999px; /* rounded-full */
+  filter: blur(16px); /* blur-lg */
+  transition: all 500ms ease; /* before:duration-500 */
+}
+
+.uiverse-glow-btn:hover::before {
+  box-shadow: 20px 20px 20px 30px #a21caf; /* hover:before:[box-shadow:_20px_20px_20px_30px_#a21caf] */
+  right: 3rem; /* hover:before:right-12 */
+  top: 3rem; /* corresponds to hover:before:-bottom-8 (4rem height, -2rem bottom = 3rem top) */
+  filter: blur(8px); /* hover:before:blur */
+}
+
+/* After Blob (Rose) */
+.uiverse-glow-btn::after {
+  content: '';
+  position: absolute;
+  z-index: 10;
+  width: 5rem; /* w-20 */
+  height: 5rem; /* h-20 */
+  background-color: #fda4af; /* bg-rose-300 */
+  right: 2rem; /* right-8 */
+  top: 0.75rem; /* top-3 */
+  border-radius: 9999px; /* rounded-full */
+  filter: blur(16px); /* blur-lg */
+  transition: all 500ms ease; /* after:duration-500 */
+}
+
+.uiverse-glow-btn:hover::after {
+  right: -2rem; /* hover:after:-right-8 */
+}
+
+.uiverse-glow-btn .text {
+  position: relative;
+  z-index: 20; /* To appear above the before/after background elements */
+  font-family: inherit;
+  transition: inherit;
+}
+
+/* Navbar Variant */
+.uiverse-glow-btn.nav-size {
+  height: 2.5rem;
+  width: auto;
+  padding: 0 1.25rem;
+  font-size: 0.82rem;
+  border-radius: 0.375rem;
+}
+.uiverse-glow-btn.nav-size::after {
+  width: 3rem;
+  height: 3rem;
+  right: -0.5rem;
+  top: -0.5rem;
+}
+.uiverse-glow-btn.nav-size::before {
+  width: 2rem;
+  height: 2rem;
+}
