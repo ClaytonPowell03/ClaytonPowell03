@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ | scAId — AI Text-to-CAD Questions & Answers</title>
+  <meta name="description" content="Frequently asked questions about scAId. Learn about text-to-CAD, parametric modeling, CSG booleans, STL export, and how scAId compares to traditional CAD software." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://scaid.tech/faq.html" />
+  <meta name="theme-color" content="#09090b" />
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="stylesheet" href="/css/global.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+  <link rel="stylesheet" href="/css/uiverse-btn.css" />
+</head>
+<body>
+
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-screen__content">
+      <div class="loading-screen__logo">
+        <img src="/logo.png" alt="scAId logo" class="loading-screen__icon" style="width:32px; height:32px; object-fit:contain;" />
+        <span>scAId</span>
+      </div>
+      <div class="loading-screen__bar"><div class="loading-screen__bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Page Transition -->
+  <div class="page-transition" id="page-transition"><div class="page-transition__inner"></div></div>
+
+  <!-- ─── Navbar ─────────────────────────────────── -->
+  <nav class="navbar scrolled" id="navbar" aria-label="Main navigation">
+    <a href="/" class="navbar__logo" aria-label="scAId home">
+      <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
+    </a>
+    <ul class="navbar__links">
+      <li><a href="features.html">Features</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="openscad-guide.html">Guide</a></li>
+      <li><a href="workflow.html">Workflow</a></li>
+      <li><a href="faq.html" style="color:#e0e0e0;">FAQ</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+      <li><a href="render.html" class="uiverse-glow-btn nav-size" style="text-decoration: none;"><span class="text">Open Editor</span></a></li>
+    </ul>
+    <button class="navbar__hamburger" id="hamburger-btn" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="features.html" class="mobile-nav__link">Features</a>
+    <a href="about.html" class="mobile-nav__link">About</a>
+    <a href="openscad-guide.html" class="mobile-nav__link">Guide</a>
+    <a href="workflow.html" class="mobile-nav__link">Workflow</a>
+    <a href="faq.html" class="mobile-nav__link">FAQ</a>
+    <a href="render.html" class="btn btn-primary mobile-nav__cta">Open Editor →</a>
+  </div>
+
+  <main>
+
+  <!-- ─── FAQ ─────────────────────────────────────── -->
+  <section class="faq" id="faq" style="padding-top: 140px;">
+    <div class="faq__header">
+      <h1 class="fade-in">Frequently asked questions</h1>
+      <p class="fade-in">Answers to the most common questions about scAId, text-to-CAD, and browser-based 3D modeling.</p>
+    </div>
+    <div class="faq__list">
+      <details class="faq__item fade-in">
+        <summary class="faq__question">What is text-to-CAD?</summary>
+        <div class="faq__answer">
+          <p>Text-to-CAD is a method of creating 3D models by writing code or natural language descriptions instead of using a traditional click-and-drag CAD interface. With scAId, you can write OpenSCAD-compatible code using parametric variables, loops, and CSG boolean operations — or simply describe what you want in plain English and let the AI generate the geometry for you. It's the fastest way to go from an idea to a 3D-printable model.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">Is scAId really free?</summary>
+        <div class="faq__answer">
+          <p>Yes. scAId is 100% free with no hidden costs and no trial periods. You can use the full editor, render models in real-time, and export STL and OBJ files without creating an account. Guest users get 2 AI requests every 3 hours, and a free account removes that AI limit while adding cloud saving and collaboration features.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">Can I export files for 3D printing?</summary>
+        <div class="faq__answer">
+          <p>Absolutely. scAId supports one-click export to STL format, which is the universal standard for 3D printing. STL files from scAId work with every popular slicer including Cura, PrusaSlicer, BambuStudio, and OrcaSlicer. You can also export to OBJ format for use in Blender, Fusion 360, and other 3D applications. There's even SCAD source code download if you want to continue editing in desktop OpenSCAD.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">Do I need to install anything?</summary>
+        <div class="faq__answer">
+          <p>No. scAId runs entirely in your web browser — Chrome, Firefox, Safari, or Edge. There are no downloads, no plugins, and no system dependencies. The code editor, 3D renderer, and export engine all run client-side using WebGL and JavaScript. Your models never leave your browser unless you explicitly export or save them to the cloud.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">Is scAId compatible with OpenSCAD?</summary>
+        <div class="faq__answer">
+          <p>Yes. scAId uses an OpenSCAD-compatible parser and rendering engine. You can write standard OpenSCAD syntax including modules, variables, for-loops, if-else logic, and all CSG operations (union, difference, intersection). Import your existing .scad files, edit them in the browser, and export the results — or download the .scad source to use in the desktop OpenSCAD application.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">How does the AI assistant work?</summary>
+        <div class="faq__answer">
+          <p>scAId's AI assistant accepts natural language descriptions and generates OpenSCAD code. You can type prompts like "create a box with a lid that snaps on" or "add ventilation holes to the sides" and the AI will write the parametric code for you. You can also click directly on faces of your 3D model to make targeted edits — resize dimensions with quick controls, or describe complex modifications for the AI to implement. Guest users get 2 AI requests every 3 hours, and a free account removes that limit.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">What is parametric modeling and why does it matter?</summary>
+        <div class="faq__answer">
+          <p>Parametric modeling means defining your 3D geometry using variables and mathematical expressions rather than fixed dimensions. Instead of hardcoding "width = 50mm", you write <code>width = base_width * 2 + clearance</code>. Change one variable, and every dimension that references it updates automatically. This makes designs adaptable — need a smaller version of your bracket? Change one number. Need to account for printer tolerance? Add a clearance variable. scAId's code-based approach makes parametric modeling natural and intuitive.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">What is CSG (Constructive Solid Geometry)?</summary>
+        <div class="faq__answer">
+          <p>CSG is a technique for building complex 3D shapes by combining simpler primitives using boolean operations. <strong>Union</strong> merges two shapes together. <strong>Difference</strong> subtracts one shape from another (like drilling a hole). <strong>Intersection</strong> keeps only the volume where shapes overlap. In scAId, CSG operations are first-class features — you can nest them, combine them with loops, and build anything from simple brackets to intricate multi-part assemblies.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">How does scAId compare to Fusion 360, TinkerCAD, or SolidWorks?</summary>
+        <div class="faq__answer">
+          <p>scAId occupies a unique niche. Unlike Fusion 360 or SolidWorks, it requires no download, no subscription, and no account. Unlike TinkerCAD, it offers full parametric control through code and an AI assistant. scAId is ideal for rapid prototyping, educational use, and 3D printing workflows where you want to go from idea to STL in minutes. For production mechanical engineering, traditional CAD still has deeper tooling — but for everything else, scAId is faster, simpler, and free.</p>
+        </div>
+      </details>
+      <details class="faq__item fade-in">
+        <summary class="faq__question">Can I save and share my projects?</summary>
+        <div class="faq__answer">
+          <p>Yes. Without an account, your projects save locally in your browser's storage. With a free account, you can save projects to the cloud, access them from any device, and share them with other scAId users. You can grant view-only or edit access when sharing, making it easy to collaborate on designs with teammates, classmates, or clients.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ─── CTA ────────────────────────────────────── -->
+  <section class="cta" id="cta">
+    <div class="cta__content">
+      <h2 class="fade-in">Start building — it's free</h2>
+      <p class="fade-in">No signup. No install. No paywall. Open the editor and create your first 3D model in under a minute.</p>
+      <a href="render.html" class="uiverse-glow-btn page-link fade-in" id="cta-bottom" style="text-decoration: none; margin: 0 auto;">
+        <span class="text">Open Editor →</span>
+      </a>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ─── Footer ─────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <a href="/" class="navbar__logo" style="font-size:1rem;" aria-label="scAId home">
+          <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
+        </a>
+        <p class="footer__about">Free, AI-powered text-to-CAD tool. Write code or use plain English to design 3D models in your browser. Export STL for 3D printing.</p>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Product</h4>
+        <a href="render.html">Editor</a>
+        <a href="features.html">Features</a>
+        <a href="workflow.html">How It Works</a>
+        <a href="about.html">About</a>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Resources</h4>
+        <a href="openscad-guide.html">OpenSCAD &amp; SCAD Guide</a>
+        <a href="gallery.html">Model Gallery</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Connect</h4>
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">© 2026 scAId — Free AI-powered text-to-CAD tool</span>
+    </div>
+  </footer>
+
+  <script type="module" src="/js/subpage.js"></script>
+</body>
+</html>

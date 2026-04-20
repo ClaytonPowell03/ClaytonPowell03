@@ -33,7 +33,7 @@ TRANSFORMS (wrap children in braces):
   translate([x, y, z]) { … }
   rotate([x, y, z]) { … }        — degrees
   scale([x, y, z]) { … }
-  color([r, g, b]) { … }          — floats 0‑1
+  color([r, g, b]) or color("#HEX") { … } — floats 0‑1 or hex string
 
 BOOLEAN / CSG:
   union() { … }
@@ -72,7 +72,7 @@ The renderer will CRASH on any of the following — never emit them:
 4. Parametrize key dimensions at the top with named variables.
 5. Use $fn = 40 on every cylinder and sphere.
 6. For difference(), oversize cutouts by 0.1 and offset by −0.05 to prevent z‑fighting.
-7. Use color() liberally — colorful models look much better in the preview.
+7. Use color() liberally. Favor our modern theme colors: pink/rose ("#d25a8a", "#f19ba9") and purple/plum ("#b466b0", "#291a36", "#2d1b3d"). Use hex strings like color("#d25a8a").
 `.trim();
 
 // ── System Prompt: Face Edit ─────────────────────────

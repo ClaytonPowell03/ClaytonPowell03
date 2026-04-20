@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Features | scAId — AI Text-to-CAD Editor</title>
+  <meta name="description" content="Explore scAId's features: real-time 3D preview, CSG booleans, parametric variables, AI text-to-CAD, STL/OBJ export, and 180+ FPS WebGL rendering." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://scaid.tech/features.html" />
+  <meta name="theme-color" content="#09090b" />
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="stylesheet" href="/css/global.css" />
+  <link rel="stylesheet" href="/css/landing.css" />
+  <link rel="stylesheet" href="/css/uiverse-btn.css" />
+</head>
+<body>
+
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-screen__content">
+      <div class="loading-screen__logo">
+        <img src="/logo.png" alt="scAId logo" class="loading-screen__icon" style="width:32px; height:32px; object-fit:contain;" />
+        <span>scAId</span>
+      </div>
+      <div class="loading-screen__bar"><div class="loading-screen__bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Page Transition -->
+  <div class="page-transition" id="page-transition"><div class="page-transition__inner"></div></div>
+
+  <!-- ─── Navbar ─────────────────────────────────── -->
+  <nav class="navbar scrolled" id="navbar" aria-label="Main navigation">
+    <a href="/" class="navbar__logo" aria-label="scAId home">
+      <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
+    </a>
+    <ul class="navbar__links">
+      <li><a href="features.html" style="color:#e0e0e0;">Features</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="openscad-guide.html">Guide</a></li>
+      <li><a href="workflow.html">Workflow</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+      <li><a href="render.html" class="uiverse-glow-btn nav-size" style="text-decoration: none;"><span class="text">Open Editor</span></a></li>
+    </ul>
+    <button class="navbar__hamburger" id="hamburger-btn" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="features.html" class="mobile-nav__link">Features</a>
+    <a href="about.html" class="mobile-nav__link">About</a>
+    <a href="openscad-guide.html" class="mobile-nav__link">Guide</a>
+    <a href="workflow.html" class="mobile-nav__link">Workflow</a>
+    <a href="faq.html" class="mobile-nav__link">FAQ</a>
+    <a href="render.html" class="btn btn-primary mobile-nav__cta">Open Editor →</a>
+  </div>
+
+  <main>
+
+  <!-- ─── Features ───────────────────────────────── -->
+  <section class="features" id="features" style="padding-top: 140px;">
+    <div class="features__header">
+      <h1 class="features__title fade-in">Everything you need in one tool</h1>
+      <p class="features__desc fade-in">A complete text-to-CAD workspace — code editor, 3D viewport, AI assistant, and export pipeline — all running client-side in your browser.</p>
+    </div>
+
+    <div class="features__grid">
+      <!-- Hero feature: live editor preview -->
+      <div class="feature-hero fade-in">
+        <div class="feature-hero__preview">
+          <div class="feature-hero__editor-mock">
+            <div class="mock-titlebar">
+              <span class="mock-dot mock-dot--red"></span>
+              <span class="mock-dot mock-dot--yellow"></span>
+              <span class="mock-dot mock-dot--green"></span>
+              <span class="mock-filename">model.scad</span>
+            </div>
+            <pre class="mock-code" id="typing-code"><code></code></pre>
+          </div>
+          <div class="feature-hero__viewport">
+            <canvas id="feature-scene-canvas"></canvas>
+          </div>
+        </div>
+        <div class="feature-hero__caption">
+          <h3>Real-time 3D preview</h3>
+          <p>Write OpenSCAD code on the left, see your 3D model update on the right. Orbit, pan, and zoom the viewport — all rendered in WebGL at 180+ FPS with no server round-trips.</p>
+        </div>
+      </div>
+
+      <!-- 3-column feature row -->
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>CSG Booleans</h3>
+        <p>Union, difference, intersection — the building blocks of constructive solid geometry. Combine primitives into complex mechanical parts, housings, and assemblies.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>Parametric Variables</h3>
+        <p>Define dimensions as variables. Use mathematical expressions and for-loops. Change one value, and the entire model updates — true parametric design for rapid prototyping.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator"></div>
+        <h3>STL & OBJ Export</h3>
+        <p>One-click download to STL or OBJ format. Send directly to your slicer for 3D printing, or import into Blender, Fusion 360, or any CAD tool. No conversion needed.</p>
+      </div>
+
+      <!-- 3-column feature row 2 -->
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>AI Text-to-CAD</h3>
+        <p>Describe your model in plain English — "a gear with 20 teeth and a 5mm bore" — and the AI generates OpenSCAD code. Edit and iterate with conversational prompts.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>Keyboard-First Workflow</h3>
+        <p>Ctrl+Enter to render. Ctrl+S to save. Camera presets on F, T, R, I. Designed for engineers and makers who think faster than they click.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-card__indicator feature-card__indicator--purple"></div>
+        <h3>Console & Debugging</h3>
+        <p>Integrated console shows parse timing, vertex counts, and errors. Debug your geometry and inspect model statistics without leaving the editor environment.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Showcase ────────────────────────────────── -->
+  <section class="showcase" id="showcase">
+    <div class="showcase__container">
+      <div class="showcase__preview fade-in">
+        <canvas id="showcase-canvas"></canvas>
+        <div class="showcase__reflection"></div>
+      </div>
+      <div class="showcase__info">
+        <h2 class="fade-in">Built for speed</h2>
+        <p class="fade-in">scAId's rendering engine parses models in under 40ms. The 3D viewport runs at 180+ FPS using hardware-accelerated WebGL. Everything happens on the GPU — no server round-trips, no waiting. Your code, your browser, your geometry.</p>
+        <div class="showcase__metrics fade-in">
+          <div class="metric">
+            <span class="metric__value" data-count="188">0</span>
+            <span class="metric__unit">FPS</span>
+          </div>
+          <div class="metric">
+            <span class="metric__value" data-count="39">&lt;40</span>
+            <span class="metric__unit">ms parse</span>
+          </div>
+          <div class="metric">
+            <span class="metric__value">0</span>
+            <span class="metric__unit">server calls</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA ────────────────────────────────────── -->
+  <section class="cta" id="cta">
+    <div class="cta__content">
+      <h2 class="fade-in">Start building — it's free</h2>
+      <p class="fade-in">No signup. No install. No paywall. Open the editor and create your first 3D model in under a minute.</p>
+      <a href="render.html" class="uiverse-glow-btn page-link fade-in" id="cta-bottom" style="text-decoration: none; margin: 0 auto;">
+        <span class="text">Open Editor →</span>
+      </a>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ─── Footer ─────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <a href="/" class="navbar__logo" style="font-size:1rem;" aria-label="scAId home">
+          <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
+        </a>
+        <p class="footer__about">Free, AI-powered text-to-CAD tool. Write code or use plain English to design 3D models in your browser. Export STL for 3D printing.</p>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Product</h4>
+        <a href="render.html">Editor</a>
+        <a href="features.html">Features</a>
+        <a href="workflow.html">How It Works</a>
+        <a href="about.html">About</a>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Resources</h4>
+        <a href="openscad-guide.html">OpenSCAD &amp; SCAD Guide</a>
+        <a href="gallery.html">Model Gallery</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Connect</h4>
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">© 2026 scAId — Free AI-powered text-to-CAD tool</span>
+    </div>
+  </footer>
+
+  <script type="module" src="/js/subpage.js"></script>
+</body>
+</html>

@@ -3,84 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Browser CAD Workflow | scAId</title>
-  <meta name="description" content="Learn about the browser-based CAD workflow using scAId's OpenSCAD editor." />
+  <title>Workflow | scAId — Code → Preview → Print</title>
+  <meta name="description" content="Learn about the scAId workflow: write OpenSCAD code or use AI, preview 3D models in real time, export STL for 3D printing. Compare scAId to traditional CAD." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://scaid.tech/workflow.html" />
+  <meta name="theme-color" content="#09090b" />
   <link rel="icon" type="image/png" href="/logo.png" />
   <link rel="stylesheet" href="/css/global.css" />
   <link rel="stylesheet" href="/css/landing.css" />
-  <link rel="stylesheet" href="/css/render.css" />
   <link rel="stylesheet" href="/css/uiverse-btn.css" />
 </head>
-<body class="gallery-page">
+<body>
+
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-screen__content">
+      <div class="loading-screen__logo">
+        <img src="/logo.png" alt="scAId logo" class="loading-screen__icon" style="width:32px; height:32px; object-fit:contain;" />
+        <span>scAId</span>
+      </div>
+      <div class="loading-screen__bar"><div class="loading-screen__bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- Page Transition -->
+  <div class="page-transition" id="page-transition"><div class="page-transition__inner"></div></div>
+
   <!-- ─── Navbar ─────────────────────────────────── -->
-  <nav class="navbar" id="navbar" aria-label="Main navigation">
-    <a href="/" class="navbar__logo">
+  <nav class="navbar scrolled" id="navbar" aria-label="Main navigation">
+    <a href="/" class="navbar__logo" aria-label="scAId home">
       <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
     </a>
     <ul class="navbar__links">
-      <li><a href="/">Home</a></li>
+      <li><a href="features.html">Features</a></li>
+      <li><a href="about.html">About</a></li>
       <li><a href="openscad-guide.html">Guide</a></li>
+      <li><a href="workflow.html" style="color:#e0e0e0;">Workflow</a></li>
+      <li><a href="faq.html">FAQ</a></li>
       <li><a href="gallery.html">Gallery</a></li>
       <li><a href="render.html" class="uiverse-glow-btn nav-size" style="text-decoration: none;"><span class="text">Open Editor</span></a></li>
     </ul>
+    <button class="navbar__hamburger" id="hamburger-btn" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
 
-  <main style="padding-top: 80px; min-height: 80vh;">
-    <section class="editor-seo" aria-labelledby="editor-seo-title">
-      <div class="editor-seo__inner">
-        <div class="editor-seo__content">
-          <p class="editor-seo__eyebrow">Browser CAD workflow</p>
-          <h1 id="editor-seo-title">OpenSCAD editor for AI CAD, SCAD files, and STL-ready 3D printing</h1>
-          <p class="editor-seo__lead">This is the workflow for scAId. It is built for people who want to write OpenSCAD in the browser, generate geometry from text prompts, iterate on parametric parts quickly, and export clean STL files for slicers and printers.</p>
-          <div class="editor-seo__grid">
-            <article class="editor-seo__card">
-              <h2>Write or generate SCAD</h2>
-              <p>Start from a blank <code>.scad</code> file, a reusable template, or a plain-English prompt that the AI turns into parametric code you can inspect and edit directly.</p>
-            </article>
-            <article class="editor-seo__card">
-              <h2>Preview geometry in real time</h2>
-              <p>Render immediately in the browser, inspect faces and dimensions, and refine boolean operations, clearances, and proportions before you export.</p>
-            </article>
-            <article class="editor-seo__card">
-              <h2>Export SCAD to STL</h2>
-              <p>Download STL or OBJ files for 3D printing workflows and keep the source SCAD for future edits, versioning, and repeatable engineering changes.</p>
-            </article>
-          </div>
+  <div class="mobile-nav" id="mobile-nav">
+    <a href="features.html" class="mobile-nav__link">Features</a>
+    <a href="about.html" class="mobile-nav__link">About</a>
+    <a href="openscad-guide.html" class="mobile-nav__link">Guide</a>
+    <a href="workflow.html" class="mobile-nav__link">Workflow</a>
+    <a href="faq.html" class="mobile-nav__link">FAQ</a>
+    <a href="render.html" class="btn btn-primary mobile-nav__cta">Open Editor →</a>
+  </div>
+
+  <main>
+
+  <!-- ─── Workflow ────────────────────────────────── -->
+  <section class="workflow" id="workflow" style="padding-top: 140px;">
+    <div class="workflow__header">
+      <h1 class="fade-in">Code → Preview → Print</h1>
+      <p class="fade-in">Three steps from idea to physical part. No friction, no waiting.</p>
+    </div>
+    <div class="workflow__steps">
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">1</div>
+        <div class="workflow-step__body">
+          <h3>Write</h3>
+          <p>Define geometry with OpenSCAD's declarative language — or use the AI assistant to describe your model in plain English. Variables, loops, and booleans give you full parametric control.</p>
         </div>
-        <aside class="editor-seo__aside">
-          <h2>Useful next steps</h2>
-          <a href="openscad-guide.html">Read the OpenSCAD and SCAD guide</a>
-          <a href="gallery.html">Browse public CAD examples</a>
-          <a href="render.html">Open the Editor</a>
-        </aside>
       </div>
-    </section>
+      <div class="workflow-step__line fade-in"></div>
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">2</div>
+        <div class="workflow-step__body">
+          <h3>Preview</h3>
+          <p>Hit Ctrl+Enter. Your model renders in milliseconds with full lighting, shadows, and interactive orbit controls. Inspect every angle in the WebGL viewport at 180+ FPS.</p>
+        </div>
+      </div>
+      <div class="workflow-step__line fade-in"></div>
+      <div class="workflow-step fade-in">
+        <div class="workflow-step__num">3</div>
+        <div class="workflow-step__body">
+          <h3>Export & Print</h3>
+          <p>Download as STL or OBJ with one click. Load into Cura, PrusaSlicer, or BambuStudio. Print. Hold your design in your hands — from code to physical part in minutes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Browser CAD Workflow ────────────────────── -->
+  <section class="about" id="browser-workflow" style="border-bottom: none;">
+    <div class="about__container">
+      <div class="about__label fade-in">Browser CAD workflow</div>
+      <h2 class="about__title fade-in">OpenSCAD editor for AI CAD, SCAD files, and STL-ready 3D printing</h2>
+      <div class="about__body" style="grid-template-columns: 1fr;">
+        <div class="about__text fade-in">
+          <p>This is the workflow for scAId. It is built for people who want to write OpenSCAD in the browser, generate geometry from text prompts, iterate on parametric parts quickly, and export clean STL files for slicers and printers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Comparison ─────────────────────────────── -->
+  <section class="comparison" id="comparison">
+    <div class="comparison__header">
+      <h2 class="fade-in">Why scAId over traditional CAD?</h2>
+      <p class="fade-in">We're not trying to replace Fusion 360 or SolidWorks. But for fast prototyping, learning, and 3D printing — scAId gets you there faster.</p>
+    </div>
+    <div class="comparison__table-wrap fade-in">
+      <table class="comparison__table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="comparison__highlight">scAId</th>
+            <th>Traditional CAD</th>
+            <th>Desktop OpenSCAD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Price</td><td class="comparison__highlight"><strong>Free forever</strong></td><td>$60–500/year</td><td>Free</td></tr>
+          <tr><td>Installation</td><td class="comparison__highlight"><strong>None — browser only</strong></td><td>2–8 GB download</td><td>200 MB download</td></tr>
+          <tr><td>AI assistance</td><td class="comparison__highlight"><strong>Built-in AI chat</strong></td><td>Third-party plugins</td><td>None</td></tr>
+          <tr><td>Parametric design</td><td class="comparison__highlight"><strong>Full support</strong></td><td>Full support</td><td>Full support</td></tr>
+          <tr><td>Real-time preview</td><td class="comparison__highlight"><strong>Instant (WebGL)</strong></td><td>Instant</td><td>Manual render</td></tr>
+          <tr><td>STL export</td><td class="comparison__highlight"><strong>One click</strong></td><td>Supported</td><td>Supported</td></tr>
+          <tr><td>Learning curve</td><td class="comparison__highlight"><strong>Minutes</strong></td><td>Weeks to months</td><td>Days</td></tr>
+          <tr><td>Cross-platform</td><td class="comparison__highlight"><strong>Any browser</strong></td><td>OS-specific</td><td>OS-specific</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ─── Learn Hub ──────────────────────────────── -->
+  <section class="learn-hub" id="learn">
+    <div class="learn-hub__header">
+      <h2 class="fade-in">Learn OpenSCAD, SCAD files, and AI CAD workflows</h2>
+      <p class="fade-in">Deeper entry points for makers and engineers who want browser CAD, OpenSCAD help, or a fast SCAD-to-STL workflow.</p>
+    </div>
+    <div class="learn-hub__grid">
+      <article class="learn-hub__card fade-in">
+        <span class="learn-hub__eyebrow">OpenSCAD Guide</span>
+        <h3>Understand SCAD files, parametric modeling, and browser-based CAD</h3>
+        <p>Read a practical guide to OpenSCAD, learn what a <code>.scad</code> file does, and see why text-based CAD works well for brackets, fixtures, enclosures, classroom projects, and repeatable engineering parts.</p>
+        <a href="openscad-guide.html" class="learn-hub__link page-link">Read the guide →</a>
+      </article>
+      <article class="learn-hub__card fade-in">
+        <span class="learn-hub__eyebrow">SCAD to STL</span>
+        <h3>Open the editor to go from code or prompts to printable geometry</h3>
+        <p>Use the browser editor to write OpenSCAD, generate CAD with AI, inspect geometry in real time, and export STL or OBJ files for Cura, PrusaSlicer, Bambu Studio, and other slicers.</p>
+        <a href="render.html" class="learn-hub__link page-link">Launch the editor →</a>
+      </article>
+      <article class="learn-hub__card fade-in">
+        <span class="learn-hub__eyebrow">Community Models</span>
+        <h3>Browse public CAD examples and 3D-printable project ideas</h3>
+        <p>Explore community designs for brackets, gadgets, robotics parts, and other maker projects, then open them directly in the editor to study or remix the source.</p>
+        <a href="gallery.html" class="learn-hub__link page-link">Browse the gallery →</a>
+      </article>
+    </div>
+  </section>
+
   </main>
 
+  <!-- ─── Footer ─────────────────────────────────── -->
   <footer class="footer">
     <div class="footer__inner">
       <div class="footer__brand">
         <a href="/" class="navbar__logo" style="font-size:1rem;" aria-label="scAId home">
           <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
         </a>
-        <p class="footer__about">Community OpenSCAD examples, AI CAD concepts, and 3D-printing project inspiration from the scAId ecosystem.</p>
+        <p class="footer__about">Free, AI-powered text-to-CAD tool. Write code or use plain English to design 3D models in your browser. Export STL for 3D printing.</p>
       </div>
       <div class="footer__col">
-        <h4 class="footer__col-title">Explore</h4>
-        <a href="/">Home</a>
-        <a href="openscad-guide.html">OpenSCAD Guide</a>
-        <a href="render.html">Open Editor</a>
+        <h4 class="footer__col-title">Product</h4>
+        <a href="render.html">Editor</a>
+        <a href="features.html">Features</a>
+        <a href="workflow.html">How It Works</a>
+        <a href="about.html">About</a>
       </div>
       <div class="footer__col">
-        <h4 class="footer__col-title">Topics</h4>
-        <a href="workflow.html">Browser CAD Workflow</a>
-        <a href="openscad-guide.html#scad-file">What is a SCAD file?</a>
-        <a href="openscad-guide.html#stl-workflow">SCAD to STL workflow</a>
+        <h4 class="footer__col-title">Resources</h4>
+        <a href="openscad-guide.html">OpenSCAD &amp; SCAD Guide</a>
+        <a href="gallery.html">Model Gallery</a>
+        <a href="faq.html">FAQ</a>
+      </div>
+      <div class="footer__col">
+        <h4 class="footer__col-title">Connect</h4>
+        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
       </div>
     </div>
     <div class="footer__bottom">
-      <span class="footer__copy">© 2026 scAId — Community CAD gallery</span>
+      <span class="footer__copy">© 2026 scAId — Free AI-powered text-to-CAD tool</span>
     </div>
   </footer>
+
+  <script type="module" src="/js/subpage.js"></script>
 </body>
 </html>
