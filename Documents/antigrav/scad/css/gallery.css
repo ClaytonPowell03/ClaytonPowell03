@@ -90,7 +90,7 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(0, 240, 255, 0.1);
+  border: 3px solid rgba(241,155,169, 0.1);
   border-top-color: var(--accent-cyan);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -146,9 +146,9 @@
 
 .gallery-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(0, 240, 255, 0.2);
+  border-color: rgba(241,155,169, 0.2);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4),
-              0 0 0 1px rgba(0, 240, 255, 0.1) inset;
+              0 0 0 1px rgba(241,155,169, 0.1) inset;
 }
 
 /* ── Image / Canvas Area ──────────────────────────── */
@@ -228,7 +228,7 @@
   -webkit-backdrop-filter: blur(8px);
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 240, 255, 0.2);
+  border: 1px solid rgba(241,155,169, 0.2);
   z-index: 2;
   opacity: 0.7;
   transition: opacity 0.3s ease;
@@ -370,8 +370,8 @@
 
 .gallery-card__code-btn:hover {
   color: var(--accent-cyan);
-  border-color: rgba(0, 240, 255, 0.3);
-  background: rgba(0, 240, 255, 0.06);
+  border-color: rgba(241,155,169, 0.3);
+  background: rgba(241,155,169, 0.06);
   transform: translateY(-1px);
 }
 
@@ -415,7 +415,7 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6),
-              0 0 1px rgba(0, 240, 255, 0.15) inset;
+              0 0 1px rgba(241,155,169, 0.15) inset;
   transform: translateY(20px) scale(0.97);
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -455,8 +455,8 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--accent-cyan);
-  background: rgba(0, 240, 255, 0.06);
-  border: 1px solid rgba(0, 240, 255, 0.2);
+  background: rgba(241,155,169, 0.06);
+  border: 1px solid rgba(241,155,169, 0.2);
   border-radius: 8px;
   padding: 6px 14px;
   cursor: pointer;
@@ -465,8 +465,8 @@
 }
 
 .code-modal__copy-btn:hover {
-  background: rgba(0, 240, 255, 0.12);
-  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(241,155,169, 0.12);
+  border-color: rgba(241,155,169, 0.4);
   transform: translateY(-1px);
 }
 

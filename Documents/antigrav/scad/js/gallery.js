@@ -233,7 +233,7 @@ function initCardViewer(canvasId) {
   fillLight.position.set(-4, 2, -4);
   scene.add(fillLight);
 
-  const rimLight = new THREE.PointLight(0x00f0ff, 0.5, 25);
+  const rimLight = new THREE.PointLight(0xf19ba9, 0.5, 25);
   rimLight.position.set(-3, 5, -2);
   scene.add(rimLight);
 

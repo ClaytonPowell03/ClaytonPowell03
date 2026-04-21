@@ -82,7 +82,7 @@ export function createScene(canvas) {
   scene.add(fillLight);
 
   // Rim light (accent cyan)
-  const rimLight = new THREE.PointLight(0x00f0ff, 0.8, 30);
+  const rimLight = new THREE.PointLight(0xf19ba9, 0.8, 30);
   rimLight.position.set(-4, 6, -3);
   scene.add(rimLight);
 

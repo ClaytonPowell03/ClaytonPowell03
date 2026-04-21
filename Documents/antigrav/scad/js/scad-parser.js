@@ -415,7 +415,7 @@ function attachSourceMetadata(target, metadata = {}) {
 /**
  * Convert AST to Three.js object hierarchy.
  */
-function astToThree(ast, defaultColor = 0x00f0ff, initialScope = {}, source = '') {
+function astToThree(ast, defaultColor = 0xf19ba9, initialScope = {}, source = '') {
   const group = new THREE.Group();
   let vertexCount = 0;
   let faceCount = 0;
@@ -775,7 +775,7 @@ export function parseSCAD(source) {
   try {
     const tokens = tokenize(source);
     const ast = parse(tokens);
-    return astToThree(ast, 0x00f0ff, {}, source);
+    return astToThree(ast, 0xf19ba9, {}, source);
   } catch (err) {
     console.error('SCAD Parse Error:', err);
     // Return empty group instead of crashing — prevents black screen
