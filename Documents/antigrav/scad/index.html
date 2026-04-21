@@ -140,16 +140,18 @@
     <a href="/" class="navbar__logo" aria-label="scAId home">
       <img src="/og-image.png" alt="scAId logo" class="navbar__logo-icon" />
     </a>
-    <ul class="navbar__links">
-      <li><a href="features.html">Features</a></li>
-      <li><a href="about.html">About</a></li>
-      <li><a href="openscad-guide.html">Guide</a></li>
-      <li><a href="workflow.html">Workflow</a></li>
-      <li><a href="faq.html">FAQ</a></li>
-      <li><a href="gallery.html">Gallery</a></li>
-      <li><a href="render.html" class="uiverse-glow-btn nav-size" id="nav-editor-btn"
-          style="text-decoration: none;"><span class="text">Open Editor</span></a></li>
-    </ul>
+    <div class="navbar__menu-group">
+      <ul class="navbar__links navbar__links--boxed">
+        <li><a href="features.html">Features</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="openscad-guide.html">Guide</a></li>
+        <li><a href="workflow.html">Workflow</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="gallery.html">Gallery</a></li>
+      </ul>
+      <a href="render.html" class="uiverse-glow-btn nav-size navbar__desktop-cta" id="nav-editor-btn"
+        style="text-decoration: none;"><span class="text">Open Editor</span></a>
+    </div>
     <button class="navbar__hamburger" id="hamburger-btn" aria-label="Open menu">
       <span></span><span></span><span></span>
     </button>
@@ -178,11 +180,13 @@
           <span class="line"><span>Design in Code.</span></span>
           <span class="line"><span>Render Instantly.</span></span>
         </h1>
-        <p class="hero__subtitle">
+        <div class="hero__subtitle-box">
+          <p class="hero__subtitle">
           The free, browser-based 3D modeling tool that turns text into printable geometry.
           Write OpenSCAD code or describe your model in plain English — scAId's AI generates
           parametric 3D models with real-time preview and one-click STL export.
-        </p>
+          </p>
+        </div>
         <div class="hero__actions">
           <a href="render.html" class="uiverse-glow-btn page-link" id="cta-hero" style="text-decoration: none;">
             <span class="text">Open Editor →</span>
