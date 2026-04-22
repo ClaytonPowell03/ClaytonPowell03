@@ -297,7 +297,27 @@
           </div>
         </div>
         <div class="preview-overlay preview-overlay--bottom-left">
-          <!-- AI panel was moved to the left side tab -->
+          <div class="animation-panel" id="animation-panel">
+            <div class="animation-panel__row">
+              <button class="animation-toggle" id="btn-animation-play" title="Play or pause animation" aria-label="Play animation" disabled>▶</button>
+              <div class="animation-panel__summary">
+                <div class="animation-panel__title">Animate $t</div>
+                <div class="animation-panel__meta" id="animation-meta">Add $t to your SCAD code to animate this preview.</div>
+              </div>
+            </div>
+            <input class="animation-panel__scrubber" id="animation-scrubber" type="range" min="0" max="119" value="0" step="1" disabled />
+            <div class="animation-panel__row animation-panel__row--inputs">
+              <label class="animation-field">
+                <span>FPS</span>
+                <input id="animation-fps" type="number" min="1" max="60" value="24" inputmode="numeric" />
+              </label>
+              <label class="animation-field">
+                <span>Steps</span>
+                <input id="animation-steps" type="number" min="2" max="360" value="120" inputmode="numeric" />
+              </label>
+              <button class="animation-mini-btn" id="btn-animation-reset" type="button" title="Reset animation">Reset</button>
+            </div>
+          </div>
         </div>
         <div class="preview-overlay preview-overlay--bottom-right">
           <div class="axes-hud">

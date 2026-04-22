@@ -292,6 +292,134 @@ difference() {
 }`,
   },
   {
+    name: 'Animated Robot Gripper',
+    icon: '🦾',
+    desc: 'A renderer-compatible port of the reference arm: flange base, tubular links, gold joints, and an animated parallel gripper.',
+    code: `// Animated Robot Gripper
+// Renderer-friendly version of the reference articulated arm.
+// It keeps the same silhouette while avoiding unsupported modules and heavy union() CSG merges.
+
+scale_factor = 0.18;
+detail = 18;
+hole_detail = 10;
+
+base_d    = 70 * scale_factor;
+base_h    = 16 * scale_factor;
+tower_d   = 32 * scale_factor;
+tower_h   = 42 * scale_factor;
+joint_d   = 20 * scale_factor;
+link1_len = 82 * scale_factor;
+link2_len = 70 * scale_factor;
+link_w    = 14 * scale_factor;
+wrist_len = 22 * scale_factor;
+claw_len  = 26 * scale_factor;
+claw_w    = 6  * scale_factor;
+claw_t    = 6  * scale_factor;
+
+base_angle     = 24 + 16 * sin(360 * $t);
+shoulder_angle = 35 + 12 * sin(360 * $t);
+elbow_angle    = -50 + 18 * sin(360 * $t + 70);
+wrist_angle    = 20 + 12 * sin(360 * $t + 140);
+claw_open      = 8 + 3 * sin(720 * $t);
+
+// Base platform
+color([0.18, 0.19, 0.23])
+cylinder(h = base_h, d = base_d, $fn = detail);
+
+color([0.28, 0.30, 0.36])
+translate([0, 0, base_h])
+  cylinder(h = tower_h, d = tower_d, $fn = detail);
+
+color([0.12, 0.13, 0.16])
+for (a = [0:90:270]) {
+  rotate([0, 0, a])
+    translate([base_d * 0.32, 0, base_h * 0.5])
+      cylinder(h = base_h, d = 6 * scale_factor, center = true, $fn = hole_detail);
+}
+
+// Shoulder assembly
+translate([0, 0, base_h + tower_h])
+  rotate([0, 0, base_angle]) {
+    color([0.93, 0.72, 0.32])
+    sphere(d = joint_d, $fn = detail);
+
+    rotate([0, -shoulder_angle, 0]) {
+      // Upper arm tube
+      color([0.90, 0.91, 0.94])
+      translate([link1_len / 2, 0, 0])
+        rotate([0, 90, 0])
+          cylinder(h = link1_len, d = link_w, center = true, $fn = detail);
+
+      color([0.90, 0.91, 0.94])
+      sphere(d = link_w, $fn = detail);
+
+      color([0.90, 0.91, 0.94])
+      translate([link1_len, 0, 0])
+        sphere(d = link_w, $fn = detail);
+
+      color([0.25, 0.27, 0.32])
+      translate([link1_len * 0.22, 0, 0])
+        rotate([0, 90, 0])
+          cylinder(h = link1_len * 0.56, d = link_w * 0.38, center = true, $fn = detail);
+
+      translate([link1_len, 0, 0]) {
+        color([0.93, 0.72, 0.32])
+        sphere(d = joint_d * 0.92, $fn = detail);
+
+        rotate([0, -elbow_angle, 0]) {
+          // Forearm tube
+          color([0.90, 0.91, 0.94])
+          translate([link2_len / 2, 0, 0])
+            rotate([0, 90, 0])
+              cylinder(h = link2_len, d = link_w * 0.92, center = true, $fn = detail);
+
+          color([0.90, 0.91, 0.94])
+          sphere(d = link_w * 0.92, $fn = detail);
+
+          color([0.90, 0.91, 0.94])
+          translate([link2_len, 0, 0])
+            sphere(d = link_w * 0.92, $fn = detail);
+
+          color([0.25, 0.27, 0.32])
+          translate([link2_len * 0.24, 0, 0])
+            rotate([0, 90, 0])
+              cylinder(h = link2_len * 0.52, d = link_w * 0.32, center = true, $fn = detail);
+
+          translate([link2_len, 0, 0]) {
+            color([0.93, 0.72, 0.32])
+            sphere(d = joint_d * 0.78, $fn = detail);
+
+            rotate([0, -wrist_angle, 0]) {
+              // Wrist block
+              color([0.35, 0.37, 0.42])
+              translate([wrist_len / 2, 0, 0])
+                cube([wrist_len, 16 * scale_factor, 12 * scale_factor], center = true);
+
+              // Left finger
+              color([0.92, 0.76, 0.38])
+              translate([wrist_len + claw_len / 2, claw_open / 2 + 2 * scale_factor + claw_w / 2, 0])
+                cube([claw_len, claw_w, claw_t], center = true);
+
+              color([0.92, 0.76, 0.38])
+              translate([wrist_len + claw_len - claw_w / 2, claw_open / 2 + 6 * scale_factor, 0])
+                cube([claw_w, claw_w + 8 * scale_factor, claw_t], center = true);
+
+              // Right finger
+              color([0.92, 0.76, 0.38])
+              translate([wrist_len + claw_len / 2, -(claw_open / 2 + 2 * scale_factor + claw_w / 2), 0])
+                cube([claw_len, claw_w, claw_t], center = true);
+
+              color([0.92, 0.76, 0.38])
+              translate([wrist_len + claw_len - claw_w / 2, -(claw_open / 2 + 6 * scale_factor), 0])
+                cube([claw_w, claw_w + 8 * scale_factor, claw_t], center = true);
+            }
+          }
+        }
+      }
+    }
+  }`,
+  },
+  {
     name: 'Honeycomb',
     icon: '🐝',
     desc: 'A hexagonal honeycomb grid pattern using nested for-loops.',

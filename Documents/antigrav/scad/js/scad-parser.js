@@ -114,6 +114,9 @@ function parse(tokens) {
       const v = advance().value;
       if (v === 'true') return true;
       if (v === 'false') return false;
+      if (peek() && peek().value === '(') {
+        return { type: 'call', name: v, args: parseCallArgs() };
+      }
       return v; // Variable ref or identifier
     }
     if (peek().value === '(') {
@@ -124,6 +127,17 @@ function parse(tokens) {
     }
     advance();
     return 0;
+  }
+
+  function parseCallArgs() {
+    const args = [];
+    expect('char', '(');
+    while (peek() && !(peek().type === 'char' && peek().value === ')')) {
+      args.push(parseExpression());
+      if (peek() && peek().value === ',') advance();
+    }
+    expect('char', ')');
+    return args;
   }
 
   function parseArgs() {
@@ -280,7 +294,9 @@ function evalExpr(expr, scope) {
   if (typeof expr === 'number') return expr;
   if (typeof expr === 'boolean') return expr;
   if (typeof expr === 'string') {
-    if (scope.hasOwnProperty(expr)) return scope[expr];
+    if (Object.prototype.hasOwnProperty.call(scope, expr)) return scope[expr];
+    if (expr === 'PI') return Math.PI;
+    if (expr === 'E') return Math.E;
     return expr; // named color or unknown ident
   }
   if (Array.isArray(expr)) {
@@ -312,6 +328,45 @@ function evalExpr(expr, scope) {
         for (let v = start; v >= end; v += step) result.push(v);
       }
       return result;
+    }
+    if (expr.type === 'call') {
+      const args = expr.args.map((arg) => evalExpr(arg, scope));
+      const toRadians = (degrees = 0) => Number(degrees) * (Math.PI / 180);
+      const toDegrees = (radians = 0) => Number(radians) * (180 / Math.PI);
+
+      switch (expr.name) {
+        case 'sin': return Math.sin(toRadians(args[0] || 0));
+        case 'cos': return Math.cos(toRadians(args[0] || 0));
+        case 'tan': return Math.tan(toRadians(args[0] || 0));
+        case 'asin': return toDegrees(Math.asin(args[0] || 0));
+        case 'acos': return toDegrees(Math.acos(args[0] || 0));
+        case 'atan': return toDegrees(Math.atan(args[0] || 0));
+        case 'atan2': return toDegrees(Math.atan2(args[0] || 0, args[1] || 0));
+        case 'abs': return Math.abs(args[0] || 0);
+        case 'sign': return Math.sign(args[0] || 0);
+        case 'sqrt': return Math.sqrt(Math.max(0, args[0] || 0));
+        case 'pow': return Math.pow(args[0] || 0, args[1] || 0);
+        case 'exp': return Math.exp(args[0] || 0);
+        case 'ln':
+        case 'log': return Math.log(args[0] || 0);
+        case 'floor': return Math.floor(args[0] || 0);
+        case 'ceil': return Math.ceil(args[0] || 0);
+        case 'round': return Math.round(args[0] || 0);
+        case 'min': return Math.min(...args);
+        case 'max': return Math.max(...args);
+        case 'clamp': {
+          const value = args[0] || 0;
+          const min = args[1] ?? value;
+          const max = args[2] ?? value;
+          return Math.min(Math.max(value, min), max);
+        }
+        case 'len': {
+          const value = args[0];
+          return value && typeof value.length === 'number' ? value.length : 0;
+        }
+        default:
+          return 0;
+      }
     }
   }
   return expr;
@@ -771,11 +826,14 @@ function createPrimitive(name, args, color, metadata = null) {
 /**
  * Main entry point: parse SCAD string and return Three.js group.
  */
-export function parseSCAD(source) {
+export function parseSCAD(source, options = {}) {
   try {
+    const initialScope = options && typeof options === 'object' && !Array.isArray(options)
+      ? (options.initialScope || options.scope || options)
+      : {};
     const tokens = tokenize(source);
     const ast = parse(tokens);
-    return astToThree(ast, 0xf19ba9, {}, source);
+    return astToThree(ast, 0xf19ba9, initialScope, source);
   } catch (err) {
     console.error('SCAD Parse Error:', err);
     // Return empty group instead of crashing — prevents black screen

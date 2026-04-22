@@ -291,7 +291,8 @@ export function createScene(canvas) {
     gridHelper,
 
     /** Replace the model with new geometry */
-    setModel(threeGroup) {
+    setModel(threeGroup, options = {}) {
+      const { fitCamera = true } = options;
       clearSelectionHighlight();
       // Clear old model
       while (modelGroup.children.length > 0) {
@@ -301,8 +302,9 @@ export function createScene(canvas) {
       }
       if (threeGroup) {
         modelGroup.add(threeGroup);
-        // Auto-fit camera
-        this.fitCamera(threeGroup);
+        if (fitCamera) {
+          this.fitCamera(threeGroup);
+        }
       }
     },
 

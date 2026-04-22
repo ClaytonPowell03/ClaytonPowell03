@@ -42,10 +42,31 @@ let selectedFaceContext = null;
 let selectedQuickEditSpec = null;
 let currentUser = null;
 let currentProjectId = null;  // cloud project id when signed in
+const ANIMATION_DEFAULT_FPS = 24;
+const ANIMATION_DEFAULT_STEPS = 120;
+const ANIMATION_MIN_FPS = 1;
+const ANIMATION_MAX_FPS = 60;
+const ANIMATION_MIN_STEPS = 2;
+const ANIMATION_MAX_STEPS = 360;
+const animationState = {
+  playing: false,
+  hasAnimationVariable: false,
+  frame: 0,
+  t: 0,
+  fps: ANIMATION_DEFAULT_FPS,
+  steps: ANIMATION_DEFAULT_STEPS,
+  rafId: 0,
+  lastTickAt: 0,
+};
+let renderInFlight = false;
+let queuedRenderOptions = null;
+let suppressToastNotifications = false;
+let suppressConsoleMessages = false;
 
 // ── Console System ──────────────────────────────────
 const consoleLogs = [];
 function consoleLog(msg, level = 'info') {
+  if (suppressConsoleMessages) return;
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   consoleLogs.push({ msg, level, time: timeStr });
@@ -89,6 +110,41 @@ function setButtonBusy(buttonId, busy, busyLabel, idleLabel) {
 function formatNumber(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return 'n/a';
   return value.toFixed(2);
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(Math.max(numeric, min), max);
+}
+
+function normalizeAnimationFps(value) {
+  return Math.round(clampNumber(value, ANIMATION_MIN_FPS, ANIMATION_MAX_FPS, ANIMATION_DEFAULT_FPS));
+}
+
+function normalizeAnimationSteps(value) {
+  return Math.round(clampNumber(value, ANIMATION_MIN_STEPS, ANIMATION_MAX_STEPS, ANIMATION_DEFAULT_STEPS));
+}
+
+function sourceSupportsAnimation(source) {
+  return /\$t\b/.test(source || '');
+}
+
+function getAnimationFrameCount() {
+  return normalizeAnimationSteps(animationState.steps);
+}
+
+function frameToAnimationT(frame, steps = getAnimationFrameCount()) {
+  if (!Number.isFinite(frame) || steps <= 0) return 0;
+  return Math.min(Math.max(frame, 0), steps - 1) / steps;
+}
+
+function formatAnimationT(value) {
+  return Number.isFinite(value) ? value.toFixed(3) : '0.000';
+}
+
+function buildAnimationScope(t = animationState.t) {
+  return { '$t': t };
 }
 
 function formatQuickEditValue(value) {
@@ -277,6 +333,10 @@ function initEditor() {
         { key: 'Ctrl-Enter', run: () => { renderModel(); return true; } },
         { key: 'Cmd-Enter', run: () => { renderModel(); return true; } },
       ]),
+      EditorView.updateListener.of((update) => {
+        if (!update.docChanged) return;
+        updateAnimationUI(update.state.doc.toString());
+      }),
       EditorView.theme({
         '&': { height: '100%', fontSize: '14px' },
         '.cm-content': {
@@ -326,8 +386,232 @@ function initScene() {
 }
 
 // ── Render Model ────────────────────────────────────
-function renderModel() {
-  const source = editor.state.doc.toString();
+function updateAnimationUI(source = getEditorContent()) {
+  const playBtn = document.getElementById('btn-animation-play');
+  const resetBtn = document.getElementById('btn-animation-reset');
+  const meta = document.getElementById('animation-meta');
+  const scrubber = document.getElementById('animation-scrubber');
+  const fpsInput = document.getElementById('animation-fps');
+  const stepsInput = document.getElementById('animation-steps');
+  const supportsAnimation = sourceSupportsAnimation(source);
+  const steps = getAnimationFrameCount();
+
+  animationState.hasAnimationVariable = supportsAnimation;
+  animationState.fps = normalizeAnimationFps(animationState.fps);
+  animationState.steps = steps;
+
+  if (!supportsAnimation && animationState.playing) {
+    cancelAnimationFrame(animationState.rafId);
+    animationState.playing = false;
+    animationState.rafId = 0;
+    animationState.lastTickAt = 0;
+  }
+
+  if (animationState.frame >= steps) {
+    animationState.frame = 0;
+    animationState.t = frameToAnimationT(0, steps);
+  }
+
+  if (scrubber) {
+    scrubber.max = String(Math.max(steps - 1, 0));
+    scrubber.value = String(Math.min(animationState.frame, Math.max(steps - 1, 0)));
+    scrubber.disabled = !supportsAnimation;
+  }
+
+  if (fpsInput) fpsInput.value = String(animationState.fps);
+  if (stepsInput) stepsInput.value = String(steps);
+
+  if (playBtn) {
+    playBtn.disabled = !supportsAnimation;
+    playBtn.textContent = animationState.playing ? '❚❚' : '▶';
+    playBtn.title = animationState.playing ? 'Pause animation' : 'Play animation';
+    playBtn.setAttribute('aria-label', animationState.playing ? 'Pause animation' : 'Play animation');
+    playBtn.classList.toggle('is-playing', animationState.playing);
+  }
+
+  if (resetBtn) resetBtn.disabled = !supportsAnimation;
+
+  if (meta) {
+    meta.textContent = supportsAnimation
+      ? `Frame ${animationState.frame + 1} / ${steps} · $t = ${formatAnimationT(animationState.t)}`
+      : 'Add $t to your SCAD code to animate this preview.';
+  }
+}
+
+function stopPreviewAnimation(options = {}) {
+  const { keepFrame = true, render = false, source = getEditorContent() } = options;
+  if (animationState.rafId) cancelAnimationFrame(animationState.rafId);
+  animationState.rafId = 0;
+  animationState.playing = false;
+  animationState.lastTickAt = 0;
+
+  if (!keepFrame) {
+    animationState.frame = 0;
+    animationState.t = 0;
+  }
+
+  updateAnimationUI(source);
+
+  if (render) {
+    renderModel({
+      origin: 'animation',
+      animationT: animationState.t,
+      source,
+      fitCamera: false,
+      showToast: false,
+      logToConsole: false,
+    });
+  }
+}
+
+function tickPreviewAnimation(now) {
+  if (!animationState.playing) return;
+
+  const source = getEditorContent();
+  if (!sourceSupportsAnimation(source)) {
+    stopPreviewAnimation({ source });
+    return;
+  }
+
+  const fps = normalizeAnimationFps(animationState.fps);
+  const interval = 1000 / fps;
+  if (!animationState.lastTickAt) animationState.lastTickAt = now;
+
+  const elapsed = now - animationState.lastTickAt;
+  if (elapsed >= interval) {
+    const steps = getAnimationFrameCount();
+    const framesToAdvance = Math.max(1, Math.floor(elapsed / interval));
+    animationState.frame = (animationState.frame + framesToAdvance) % steps;
+    animationState.t = frameToAnimationT(animationState.frame, steps);
+    animationState.lastTickAt = now - (elapsed % interval);
+    updateAnimationUI(source);
+    renderModel({
+      origin: 'animation',
+      animationT: animationState.t,
+      source,
+      fitCamera: false,
+      showToast: false,
+      logToConsole: false,
+    });
+  }
+
+  animationState.rafId = requestAnimationFrame(tickPreviewAnimation);
+}
+
+function startPreviewAnimation() {
+  const source = getEditorContent();
+  if (!sourceSupportsAnimation(source)) {
+    updateAnimationUI(source);
+    showToast('Add $t to your SCAD code to animate the preview.');
+    return;
+  }
+
+  if (animationState.playing) return;
+
+  animationState.playing = true;
+  animationState.lastTickAt = 0;
+  updateAnimationUI(source);
+  renderModel({
+    origin: 'animation',
+    animationT: animationState.t,
+    source,
+    fitCamera: false,
+    showToast: false,
+    logToConsole: false,
+  });
+  animationState.rafId = requestAnimationFrame(tickPreviewAnimation);
+}
+
+function initAnimationControls() {
+  const playBtn = document.getElementById('btn-animation-play');
+  const resetBtn = document.getElementById('btn-animation-reset');
+  const scrubber = document.getElementById('animation-scrubber');
+  const fpsInput = document.getElementById('animation-fps');
+  const stepsInput = document.getElementById('animation-steps');
+
+  if (playBtn) {
+    playBtn.addEventListener('click', () => {
+      if (animationState.playing) stopPreviewAnimation();
+      else startPreviewAnimation();
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const source = getEditorContent();
+      stopPreviewAnimation({ keepFrame: false, source });
+      if (sourceSupportsAnimation(source)) {
+        renderModel({
+          origin: 'animation',
+          animationT: animationState.t,
+          source,
+          fitCamera: false,
+          showToast: false,
+          logToConsole: false,
+        });
+      }
+    });
+  }
+
+  if (scrubber) {
+    scrubber.addEventListener('input', () => {
+      const source = getEditorContent();
+      stopPreviewAnimation({ source });
+      animationState.frame = clampNumber(scrubber.value, 0, getAnimationFrameCount() - 1, 0);
+      animationState.t = frameToAnimationT(animationState.frame);
+      updateAnimationUI(source);
+      if (sourceSupportsAnimation(source)) {
+        renderModel({
+          origin: 'animation',
+          animationT: animationState.t,
+          source,
+          fitCamera: false,
+          showToast: false,
+          logToConsole: false,
+        });
+      }
+    });
+  }
+
+  if (fpsInput) {
+    fpsInput.addEventListener('change', () => {
+      animationState.fps = normalizeAnimationFps(fpsInput.value);
+      updateAnimationUI();
+    });
+  }
+
+  if (stepsInput) {
+    stepsInput.addEventListener('change', () => {
+      const source = getEditorContent();
+      const previousT = animationState.t;
+      animationState.steps = normalizeAnimationSteps(stepsInput.value);
+      animationState.frame = Math.round(previousT * getAnimationFrameCount());
+      animationState.frame = clampNumber(animationState.frame, 0, getAnimationFrameCount() - 1, 0);
+      animationState.t = frameToAnimationT(animationState.frame);
+      updateAnimationUI(source);
+      if (sourceSupportsAnimation(source)) {
+        renderModel({
+          origin: 'animation',
+          animationT: animationState.t,
+          source,
+          fitCamera: false,
+          showToast: false,
+          logToConsole: false,
+        });
+      }
+    });
+  }
+
+  updateAnimationUI(SAMPLE_CODE);
+}
+
+function renderModel(options = {}) {
+  const source = options.source ?? getEditorContent();
+  const origin = options.origin || 'manual';
+  const animationT = typeof options.animationT === 'number' ? options.animationT : animationState.t;
+  const fitCamera = typeof options.fitCamera === 'boolean' ? options.fitCamera : origin !== 'animation';
+  const showRenderToast = typeof options.showToast === 'boolean' ? options.showToast : origin !== 'animation';
+  const logRender = typeof options.logToConsole === 'boolean' ? options.logToConsole : origin !== 'animation';
   const statusDot = document.getElementById('status-dot');
   const statusText = document.getElementById('status-text');
   const infoStatus = document.getElementById('info-status');
@@ -336,32 +620,64 @@ function renderModel() {
   const facesEl = document.getElementById('status-faces');
   const btnRender = document.getElementById('btn-render');
 
+  if (renderInFlight) {
+    queuedRenderOptions = {
+      ...options,
+      source,
+      origin,
+      animationT,
+      fitCamera,
+      showToast: showRenderToast,
+      logToConsole: logRender,
+    };
+    return;
+  }
+
   try {
+    renderInFlight = true;
     btnRender.classList.add('rendering');
-    statusText.textContent = 'Rendering...';
-    infoStatus.textContent = 'Rendering...';
+    statusText.textContent = origin === 'animation'
+      ? `Animating $t = ${formatAnimationT(animationT)}...`
+      : 'Rendering...';
+    infoStatus.textContent = origin === 'animation'
+      ? `Animating · $t = ${formatAnimationT(animationT)}`
+      : 'Rendering...';
     statusDot.className = 'status-indicator__dot status-indicator__dot--warning';
+    suppressToastNotifications = !showRenderToast;
+    suppressConsoleMessages = !logRender;
 
     requestAnimationFrame(() => {
       try {
         const startTime = performance.now();
-        const { group, vertexCount, faceCount } = parseSCAD(source);
+        const { group, vertexCount, faceCount } = parseSCAD(source, {
+          initialScope: buildAnimationScope(animationT),
+        });
         const elapsed = (performance.now() - startTime).toFixed(1);
 
-        scene3d.setModel(group);
+        scene3d.setModel(group, { fitCamera });
         selectedFaceContext = null;
         selectedQuickEditSpec = null;
         hideFaceEditPopover();
         updateFaceHint('Click a face to quickly change simple dimensions or use AI for bigger edits.');
 
-        statusText.textContent = `Rendered in ${elapsed}ms`;
+        if (origin === 'animation') {
+          statusText.textContent = `Animating · $t = ${formatAnimationT(animationT)}`;
+          infoStatus.textContent = `Animating · ${elapsed}ms · $t = ${formatAnimationT(animationT)}`;
+        } else {
+          statusText.textContent = `Rendered in ${elapsed}ms`;
+          infoStatus.textContent = `Rendered · ${elapsed}ms`;
+        }
         infoStatus.textContent = `Rendered · ${elapsed}ms`;
+        if (origin === 'animation') {
+          infoStatus.textContent = `Animating · ${elapsed}ms · $t = ${formatAnimationT(animationT)}`;
+        }
         statusDot.className = 'status-indicator__dot';
         verticesEl.textContent = `Vertices: ${vertexCount.toLocaleString()}`;
         facesEl.textContent = `Faces: ${faceCount.toLocaleString()}`;
         btnRender.classList.remove('rendering');
 
         if (emptyState) emptyState.classList.add('hidden');
+        updateAnimationUI(source);
         showToast(`✓ Rendered — ${vertexCount.toLocaleString()} verts, ${faceCount.toLocaleString()} faces · ${elapsed}ms`);
         consoleLog(`Rendered in ${elapsed}ms — ${vertexCount} vertices, ${faceCount} faces`, 'success');
       } catch (err) {
@@ -372,9 +688,21 @@ function renderModel() {
         btnRender.classList.remove('rendering');
         showToast(`✗ ${err.message}`);
         consoleLog(`Error: ${err.message}`, 'error');
+      } finally {
+        suppressToastNotifications = false;
+        suppressConsoleMessages = false;
+        renderInFlight = false;
+        if (queuedRenderOptions) {
+          const nextRender = queuedRenderOptions;
+          queuedRenderOptions = null;
+          renderModel(nextRender);
+        }
       }
     });
   } catch (err) {
+    suppressToastNotifications = false;
+    suppressConsoleMessages = false;
+    renderInFlight = false;
     console.error('Render Error:', err);
     btnRender.classList.remove('rendering');
     consoleLog(`Fatal Error: ${err.message}`, 'error');
@@ -384,6 +712,7 @@ function renderModel() {
 // ── Toast Notification ──────────────────────────────
 let toastTimer;
 function showToast(message) {
+  if (suppressToastNotifications) return;
   const toast = document.getElementById('render-toast');
   toast.textContent = message;
   toast.classList.add('visible');
@@ -495,6 +824,7 @@ function setEditorContent(code) {
   editor.dispatch({
     changes: { from: 0, to: editor.state.doc.length, insert: code },
   });
+  updateAnimationUI(code);
 }
 
 // ── Screenshot Export ────────────────────────────────
@@ -1601,6 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initEditor();
   initScene();
   initResizeHandle();
+  initAnimationControls();
   initToolbar();
   initShortcuts();
   initTabs();
