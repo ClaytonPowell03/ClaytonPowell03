@@ -48,8 +48,19 @@ LANGUAGE:
   For‑loops:       for (i = [0:1:5]) { … }     — range [start:step:end]
   If‑blocks:       if (condition) { … }
   Expressions:     + - * / %    parentheses OK
+  Math functions:  sin cos tan asin acos atan atan2 abs sign sqrt pow exp ln log floor ceil round min max clamp
   Comments:        // single   /* multi */
   $fn:             controls curve smoothness (use 40+ for nice results)
+
+ANIMATION:
+  $t is supported by the previewer as normalized animation time from 0 up to just under 1.
+  If the user asks for animation, articulated motion, opening/closing parts, or looping movement, drive it with named variables derived from $t.
+  Good patterns:
+    angle = 45 * sin(360 * $t);
+    swing = 20 + 10 * sin(360 * $t + 90);
+    gap = 8 + 3 * sin(720 * $t);
+  Prefer separate transformed solids for articulated parts instead of wrapping everything in union().
+  Use nested translate()/rotate() blocks to build joint chains.
 
 ─── HARD CONSTRAINTS ──────────────────────────────────
 
@@ -73,6 +84,7 @@ The renderer will CRASH on any of the following — never emit them:
 5. Use $fn = 40 on every cylinder and sphere.
 6. For difference(), oversize cutouts by 0.1 and offset by −0.05 to prevent z‑fighting.
 7. Use color() liberally. Favor our modern theme colors: pink/rose ("#d25a8a", "#f19ba9") and purple/plum ("#b466b0", "#291a36", "#2d1b3d"). Use hex strings like color("#d25a8a").
+8. If animation is requested, keep moving values in named variables near the top and derive them from $t.
 `.trim();
 
 // ── System Prompt: Face Edit ─────────────────────────
@@ -86,6 +98,8 @@ Rules:
 2. Keep the same variable names, indentation style, and comments.
 3. Return the FULL updated script — raw code only, no markdown, no explanations.
 4. Stay within the renderer's supported dialect (same constraints as the generation prompt).
+5. The renderer supports $t-based animation. Preserve existing animation variables when present unless the user asks to remove or replace them.
+6. If the user asks for motion, articulation, opening/closing parts, or a looping preview, express it with named variables derived from $t.
 `.trim();
 
 // ── Utilities ────────────────────────────────────────
