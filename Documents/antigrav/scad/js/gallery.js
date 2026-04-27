@@ -12,6 +12,7 @@ const codeModalPre = document.getElementById('code-modal-source');
 const codeModalTitle = document.getElementById('code-modal-title');
 const codeModalClose = document.getElementById('code-modal-close');
 const codeModalCopy = document.getElementById('code-modal-copy');
+const GALLERY_HANDOFF_PREFIX = 'scaid_gallery_open:';
 
 // ── State ────────────────────────────────────────────
 const activeViewers = new Map(); // cardId -> { renderer, animId, canvas }
@@ -21,6 +22,7 @@ let intersectionObserver = null;
 document.addEventListener('DOMContentLoaded', () => {
   renderGallery();
   setupCodeModal();
+  setupEditorOpenLinks();
 });
 
 // ── Gallery Render ───────────────────────────────────
@@ -68,7 +70,7 @@ async function renderGallery() {
 }
 
 // ── Card HTML Builder ────────────────────────────────
-function buildCardHtml(item) {
+function buildCardHtml(item, index = 0) {
   const dateStr = new Date(item.created_at).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -79,7 +81,9 @@ function buildCardHtml(item) {
   const author = encodeHtml(item.author_name || 'Anonymous');
   const desc = encodeHtml(item.description || 'No description provided.');
   const hasCode = item.scad_code && item.scad_code.trim().length > 0;
-  const cardId = `gallery-card-${item.id}`;
+  const itemId = item.id ? String(item.id) : `item-${index}`;
+  const cardId = `gallery-card-${itemId.replace(/[^a-zA-Z0-9_-]/g, '-')}-${index}`;
+  const editorHref = `render.html?gallery_id=${encodeURIComponent(itemId)}`;
 
   // Build the thumbnail area: either a live 3D canvas or a static image fallback
   let thumbnailHtml;
@@ -123,7 +127,7 @@ function buildCardHtml(item) {
           <span class="gallery-card__date">${dateStr}</span>
           <div class="gallery-card__actions">
             ${codeAction}
-            <a href="render.html?gallery_id=${item.id}" class="gallery-card__action">Open in Editor →</a>
+            <a href="${editorHref}" class="gallery-card__action" data-gallery-open data-gallery-id="${encodeAttr(itemId)}">Open in Editor →</a>
           </div>
         </div>
       </div>
@@ -336,6 +340,60 @@ function startAnimation(viewer) {
   }
 
   tick();
+}
+
+function setupEditorOpenLinks() {
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('[data-gallery-open]');
+    if (!link) return;
+
+    const cardEl = link.closest('.gallery-card');
+    const codeBtn = cardEl?.querySelector('.gallery-card__code-btn');
+    const code = codeBtn ? decodeAttr(codeBtn.dataset.code) : '';
+    if (!code.trim()) return;
+
+    const title = codeBtn ? decodeAttr(codeBtn.dataset.title) : 'Untitled';
+    const id = decodeAttr(link.dataset.galleryId || '');
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    try {
+      cleanupGalleryHandoffs();
+      localStorage.setItem(`${GALLERY_HANDOFF_PREFIX}${token}`, JSON.stringify({
+        id,
+        title,
+        scad_code: code,
+        created_at: new Date().toISOString(),
+        handoff_at: Date.now()
+      }));
+
+      const url = new URL(link.href, window.location.href);
+      url.searchParams.set('gallery_open', token);
+      if (id) url.searchParams.set('gallery_id', id);
+      link.href = `${url.pathname}${url.search}${url.hash}`;
+    } catch (err) {
+      console.warn('Could not prepare gallery editor handoff:', err);
+    }
+  });
+}
+
+function cleanupGalleryHandoffs() {
+  const maxAgeMs = 30 * 60 * 1000;
+  const now = Date.now();
+
+  for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    if (!key.startsWith(GALLERY_HANDOFF_PREFIX)) continue;
+
+    try {
+      const payload = JSON.parse(localStorage.getItem(key) || '{}');
+      if (!payload.handoff_at || now - payload.handoff_at > maxAgeMs) {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
 }
 
 // ── Code Modal ───────────────────────────────────────

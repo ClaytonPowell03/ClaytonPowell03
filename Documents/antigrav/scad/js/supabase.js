@@ -270,14 +270,23 @@ export async function publishToGallery(title, description, scadCode, thumbnailUr
   const user = await getUser();
   if (!user) throw new Error('Not authenticated');
 
+  const cleanTitle = String(title || '').trim() || 'Untitled Design';
+  const cleanDescription = String(description || '').trim();
+  const cleanAuthorName = String(authorName || '').trim() || 'Anonymous';
+  const cleanScadCode = String(scadCode || '').trim();
+
+  if (!cleanScadCode) {
+    throw new Error('Cannot publish an empty model.');
+  }
+
   const { data, error } = await supabase
     .from('gallery')
     .insert({
       owner_id: user.id,
-      author_name: authorName,
-      title,
-      description,
-      scad_code: scadCode,
+      author_name: cleanAuthorName,
+      title: cleanTitle,
+      description: cleanDescription,
+      scad_code: cleanScadCode,
       thumbnail_url: thumbnailUrl
     })
     .select()
@@ -285,6 +294,21 @@ export async function publishToGallery(title, description, scadCode, thumbnailUr
 
   if (error) throw error;
   return data;
+}
+
+export async function getGalleryItem(id) {
+  if (!supabase) return null;
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+
+  const { data, error } = await supabase
+    .from('gallery')
+    .select('*')
+    .eq('id', cleanId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
 }
 
 export async function getGalleryLatest(limit = 20) {

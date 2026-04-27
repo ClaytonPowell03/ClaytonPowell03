@@ -24,7 +24,7 @@ import {
   isSupabaseConfigured, signUpWithEmail, signInWithEmail, signOut, getUser, getSession, onAuthChange,
   createProject, updateProject, deleteProject as deleteCloudProject,
   getMyProjects, getSharedProjects, shareProjectByEmail, uploadAvatar,
-  publishToGallery, uploadGalleryThumbnail
+  publishToGallery, uploadGalleryThumbnail, getGalleryItem
 } from './supabase.js';
 
 
@@ -62,6 +62,7 @@ let renderInFlight = false;
 let queuedRenderOptions = null;
 let suppressToastNotifications = false;
 let suppressConsoleMessages = false;
+const GALLERY_HANDOFF_PREFIX = 'scaid_gallery_open:';
 
 // ── Console System ──────────────────────────────────
 const consoleLogs = [];
@@ -827,6 +828,99 @@ function setEditorContent(code) {
   updateAnimationUI(code);
 }
 
+function filenameFromGalleryTitle(title) {
+  const base = String(title || 'gallery design')
+    .replace(/\.scad$/i, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64) || 'gallery_design';
+
+  return `${base}.scad`;
+}
+
+function getPublishDisplayName(user) {
+  const metadata = user?.user_metadata || {};
+  const name = metadata.name || metadata.full_name || metadata.display_name || metadata.preferred_username;
+  if (name && String(name).trim()) return String(name).trim();
+
+  const emailName = user?.email?.split('@')[0];
+  return emailName ? emailName.trim() : '';
+}
+
+async function loadGalleryModelFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const handoffItem = takeGalleryHandoff(params.get('gallery_open'));
+  if (handoffItem) {
+    try {
+      applyGalleryItemToEditor(handoffItem);
+      return true;
+    } catch (err) {
+      showToast('Gallery load failed: ' + err.message);
+      consoleLog(`Gallery handoff failed: ${err.message}`, 'error');
+      return false;
+    }
+  }
+
+  const galleryId = params.get('gallery_id');
+  if (!galleryId) return false;
+
+  if (!isSupabaseConfigured()) {
+    showToast('Database not configured. Cannot load gallery design.');
+    consoleLog('Gallery load skipped: Supabase is not configured', 'error');
+    return false;
+  }
+
+  try {
+    showToast('Loading gallery design...');
+    const item = await getGalleryItem(galleryId);
+    if (!item) throw new Error('Gallery design not found.');
+
+    applyGalleryItemToEditor(item);
+    return true;
+  } catch (err) {
+    showToast('Gallery load failed: ' + err.message);
+    consoleLog(`Gallery load failed: ${err.message}`, 'error');
+    return false;
+  }
+}
+
+function takeGalleryHandoff(token) {
+  if (!token) return null;
+
+  const key = `${GALLERY_HANDOFF_PREFIX}${token}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+
+    localStorage.removeItem(key);
+    const item = JSON.parse(raw);
+    const ageMs = Date.now() - Number(item.handoff_at || 0);
+    if (!Number.isFinite(ageMs) || ageMs > 30 * 60 * 1000) return null;
+    return item;
+  } catch (err) {
+    localStorage.removeItem(key);
+    consoleLog(`Gallery handoff failed: ${err.message}`, 'error');
+    return null;
+  }
+}
+
+function applyGalleryItemToEditor(item) {
+  const code = String(item?.scad_code || '');
+  if (!code.trim()) throw new Error('Gallery design has no SCAD code.');
+
+  setEditorContent(code);
+  document.getElementById('filename').textContent = filenameFromGalleryTitle(item.title);
+  currentProjectId = null;
+  showCodeEditorTab({ showWarning: false });
+  editor?.focus();
+
+  const title = item.title || 'Untitled Design';
+  showToast(`Loaded "${title}"`);
+  consoleLog(`Loaded gallery design: ${title}`, 'success');
+}
+
 // ── Screenshot Export ────────────────────────────────
 function exportScreenshot() {
   if (!scene3d) return;
@@ -1136,6 +1230,41 @@ function renderSidebarList() {
 
 function initHistory() {
   renderSidebarList();
+}
+
+function switchWorkspaceTab(activeTabId, { showWarning = true } = {}) {
+  const tabChat = document.getElementById('tab-chat');
+  const tabCode = document.getElementById('tab-code');
+  const tabConsole = document.getElementById('tab-console');
+
+  const chatContainer = document.getElementById('chat-container');
+  const editorContainer = document.getElementById('editor-container');
+  const consoleContainer = document.getElementById('console-container');
+
+  if (!tabChat || !tabCode || !tabConsole || !chatContainer || !editorContainer || !consoleContainer) return;
+
+  tabChat.classList.toggle('active', activeTabId === 'tab-chat');
+  tabCode.classList.toggle('active', activeTabId === 'tab-code');
+  tabConsole.classList.toggle('active', activeTabId === 'tab-console');
+
+  chatContainer.style.display = activeTabId === 'tab-chat' ? '' : 'none';
+  editorContainer.style.display = activeTabId === 'tab-code' ? '' : 'none';
+  consoleContainer.style.display = activeTabId === 'tab-console' ? '' : 'none';
+
+  if (activeTabId === 'tab-console') {
+    updateConsoleUI();
+  }
+
+  if (activeTabId === 'tab-code' && showWarning) {
+    if (!localStorage.getItem('scaid_code_warning_seen')) {
+      localStorage.setItem('scaid_code_warning_seen', 'true');
+      openModal('code-warning-modal');
+    }
+  }
+}
+
+function showCodeEditorTab(options = {}) {
+  switchWorkspaceTab('tab-code', options);
 }
 
 // ── Tab Switching ────────────────────────────────────
@@ -1922,7 +2051,7 @@ function highlightAIPanel() {
 }
 
 // ── Init ────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   consoleLog('SCAD Studio v3.0 initialized', 'info');
   consoleLog('Type SCAD code and press Ctrl+Enter to render', 'info');
   const filenameEl = document.getElementById('filename');
@@ -1939,11 +2068,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initTemplates();
   initHistory();
 
+  const loadedFromGallery = await loadGalleryModelFromUrl();
+
   // Hide loading screen
   hideLoadingScreen();
 
-  // Auto-render sample on load
-  setTimeout(() => renderModel(), 400);
+  // Auto-render whichever source is currently in the editor.
+  setTimeout(() => renderModel(), loadedFromGallery ? 100 : 400);
 
   // Init auth system (replaces old welcome popup)
   initAuthGate();
@@ -1981,10 +2112,11 @@ function initGalleryPublish() {
     if (!user) {
       showToast('Please sign in to publish to the gallery.');
       if (typeof initAuthGate === 'function') {
-        document.getElementById('auth-modal-overlay').classList.add('visible');
+        openModal('welcome-modal');
       }
       return;
     }
+    currentUser = user;
 
     // 2. Automatically infer best default title
     let inferredTitle = document.getElementById('filename').textContent || 'Untitled Design';
@@ -1994,8 +2126,8 @@ function initGalleryPublish() {
     titleInput.value = inferredTitle;
     descInput.value = '';
     
-    // Auto-fill nickname if they have a user name, else leave blank
-    nicknameInput.value = user.user_metadata?.name || '';
+    // Auto-fill nickname if they have a profile name, else leave blank
+    nicknameInput.value = getPublishDisplayName(user);
     
     // 3. Keep other dropdowns closed, open this one
     document.querySelectorAll('.export-dropdown.open').forEach(el => el.classList.remove('open'));
@@ -2015,7 +2147,7 @@ function initGalleryPublish() {
   });
 
   publishSubmit.addEventListener('click', async () => {
-    const nickname = nicknameInput.value.trim() || 'Anonymous';
+    const nickname = nicknameInput.value.trim() || getPublishDisplayName(currentUser) || 'Anonymous';
     const title = titleInput.value.trim();
     const desc = descInput.value.trim();
     if (!title) {
@@ -2028,6 +2160,10 @@ function initGalleryPublish() {
       publishSubmit.textContent = 'Publishing...';
 
       const code = getEditorContent();
+      if (!code.trim()) {
+        showToast('Cannot publish an empty model.');
+        return;
+      }
       
       let thumbnailUrl = null;
       if (scene3d && typeof scene3d.captureScreenshot === 'function') {
