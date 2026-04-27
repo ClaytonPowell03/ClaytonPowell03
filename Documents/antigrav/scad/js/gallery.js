@@ -52,7 +52,8 @@ async function renderGallery() {
           opacity: 0,
           duration: 0.6,
           stagger: 0.1,
-          ease: "power3.out"
+          ease: "power3.out",
+          clearProps: "opacity,transform"
         });
       }
     }

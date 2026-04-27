@@ -339,10 +339,7 @@ export async function getGalleryLatest(limit = 20) {
   // but for now we just fetch the gallery items.
   const { data, error } = await supabase
     .from('gallery')
-    .select(`
-      *,
-      owner_id
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(limit);
 
